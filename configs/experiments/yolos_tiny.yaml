@@ -1,0 +1,60 @@
+experiment:
+  name: yolos_tiny_uav
+  seed: 42
+
+paths:
+  train_images: data/processed/uav_coco/images/train
+  val_images: data/processed/uav_coco/images/val
+  test_images: data/processed/uav_coco/images/test
+  train_annotations: data/processed/uav_coco/annotations/instances_train.json
+  val_annotations: data/processed/uav_coco/annotations/instances_val.json
+  test_annotations: data/processed/uav_coco/annotations/instances_test.json
+  output_dir: runs/yolos_tiny_uav
+
+mlflow:
+  enabled: true
+  tracking_uri: http://mlflow:5000
+  experiment_name: uav-vit-thesis
+  run_name: yolos_tiny_uav
+  log_checkpoints: true
+
+monitoring:
+  pushgateway:
+    enabled: true
+    url: http://pushgateway:9091
+    job: uav-vit-train
+    timeout_seconds: 5
+
+model:
+  name: yolos_tiny
+  checkpoint: hustvl/yolos-tiny
+  num_labels: 1
+  id2label:
+    "0": uav
+  label2id:
+    uav: 0
+  train_backbone: true
+  custom_modules: []
+
+train:
+  device: auto
+  epochs: 30
+  batch_size: 4
+  learning_rate: 2.0e-5
+  weight_decay: 1.0e-4
+  num_workers: 4
+  grad_clip_norm: 1.0
+  log_interval: 20
+  mixed_precision: true
+  eval_every_epoch: true
+  checkpoint_metric: map
+  checkpoint_mode: max
+
+eval:
+  score_threshold: 0.1
+  latency_warmup_iters: 10
+  latency_iters: 50
+
+data:
+  processor_size: 800
+  normalize_boxes: false

@@ -1,0 +1,74 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "uav-vit-thesis"
+version = "0.1.0"
+description = "Research framework for UAV detection with visual transformers in challenging conditions."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Research Team" }]
+dependencies = [
+  "torch>=2.3",
+  "torchvision>=0.18",
+  "transformers>=4.46",
+  "timm>=1.0",
+  "pycocotools>=2.0.7",
+  "opencv-python>=4.10",
+  "pandas>=2.2",
+  "pyyaml>=6.0.1",
+  "tqdm>=4.66",
+  "numpy>=1.26",
+  "Pillow>=10.3",
+  "torchmetrics[detection]>=1.4",
+  "matplotlib>=3.9",
+  "scikit-learn>=1.5",
+  "mlflow>=2.20",
+  "prometheus-client>=0.21",
+]
+
+[project.optional-dependencies]
+dev = [
+  "black>=25.1.0",
+  "ruff>=0.11.0",
+  "mypy>=1.15.0",
+  "pytest>=8.3",
+  "pytest-cov>=6.0",
+  "pre-commit>=4.2",
+  "types-PyYAML>=6.0.12",
+]
+serving = [
+  "torchserve>=0.11.1",
+  "torch-model-archiver>=0.11.1",
+]
+
+[project.scripts]
+uav-vit = "uav_vit.cli:main"
+uav-vit-exporter = "uav_vit.monitoring.run_metrics_exporter:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+exclude = ["build", "dist", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "W"]
+ignore = ["E203"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-q"
+pythonpath = ["src"]

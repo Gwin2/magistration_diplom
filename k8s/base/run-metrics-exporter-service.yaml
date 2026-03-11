@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: run-metrics-exporter
+spec:
+  selector:
+    app: run-metrics-exporter
+  ports:
+    - port: 9108
+      targetPort: 9108

@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>UAV MLOps Control Center</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-theme="flight" data-motion="on" data-density="compact">
+    <div class="orb orb-a"></div>
+    <div class="orb orb-b"></div>
+    <div class="noise"></div>
+
+    <header class="panel app-header">
+      <section class="status-card" aria-label="Service status">
+        <div class="block-head">
+          <p class="block-title">Service Status</p>
+          <p class="block-subtitle">Live health of core stack</p>
+        </div>
+        <div class="status-grid">
+          <div class="status-pill" data-service="mlflow">
+            <span class="dot"></span>
+            <span>MLflow</span>
+          </div>
+          <div class="status-pill" data-service="prometheus">
+            <span class="dot"></span>
+            <span>Prometheus</span>
+          </div>
+          <div class="status-pill" data-service="grafana">
+            <span class="dot"></span>
+            <span>Grafana</span>
+          </div>
+          <div class="status-pill" data-service="pushgateway">
+            <span class="dot"></span>
+            <span>Pushgateway</span>
+          </div>
+          <div class="status-pill" data-service="torchserve">
+            <span class="dot"></span>
+            <span>TorchServe</span>
+          </div>
+          <div class="status-pill" data-service="alertmanager">
+            <span class="dot"></span>
+            <span>Alertmanager</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="appearance-card" aria-label="Appearance controls">
+        <div class="block-head block-head-inline">
+          <p class="block-title">Appearance</p>
+          <button id="menu-toggle" class="btn menu-toggle" type="button">Menu</button>
+        </div>
+        <div class="appearance-group">
+          <p class="appearance-label">Theme</p>
+          <div class="theme-switch" id="theme-switch">
+            <button class="theme-btn is-active" type="button" data-theme="flight">Flight</button>
+            <button class="theme-btn" type="button" data-theme="horizon">Horizon</button>
+            <button class="theme-btn" type="button" data-theme="paper">Paper</button>
+          </div>
+        </div>
+        <div class="appearance-group">
+          <p class="appearance-label">Density</p>
+          <div class="density-switch" id="density-switch">
+            <button class="density-btn is-active" type="button" data-density="compact">Compact</button>
+            <button class="density-btn" type="button" data-density="comfortable">Comfort</button>
+          </div>
+        </div>
+        <button id="motion-toggle" class="btn btn-ghost" type="button" aria-pressed="false">
+          Motion: on
+        </button>
+      </section>
+    </header>
+
+    <main class="workspace">
+      <aside class="panel nav-panel">
+        <p class="menu-title">Mission Menu</p>
+        <nav class="tabs-nav" id="tabs-nav">
+          <button class="tab-btn is-active" type="button" data-tab-target="tab-overview">
+            <span>Overview</span>
+            <small>kpi + dashboards</small>
+          </button>
+          <button class="tab-btn" type="button" data-tab-target="tab-training">
+            <span>Training</span>
+            <small>fine-tuning + cicd</small>
+          </button>
+          <button class="tab-btn" type="button" data-tab-target="tab-resources">
+            <span>Resources</span>
+            <small>container/process load</small>
+          </button>
+          <button class="tab-btn" type="button" data-tab-target="tab-operations">
+            <span>Operations</span>
+            <small>commands + service gateway</small>
+          </button>
+        </nav>
+      </aside>
+
+      <section class="tab-content">
+        <section class="tab-pane tab-pane-grid is-active" id="tab-overview">
+          <article class="panel panel-compact">
+            <div class="panel-title-row">
+              <h2>Live Metrics</h2>
+              <span class="tag">Prometheus</span>
+            </div>
+            <div class="kpi-grid">
+              <div class="kpi-card" data-metric="map50">
+                <p class="kpi-label">mAP50</p>
+                <p class="kpi-value">--</p>
+                <svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg>
+              </div>
+              <div class="kpi-card" data-metric="map75">
+                <p class="kpi-label">mAP75</p>
+                <p class="kpi-value">--</p>
+                <svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg>
+              </div>
+              <div class="kpi-card" data-metric="latency">
+                <p class="kpi-label">Latency (ms)</p>
+                <p class="kpi-value">--</p>
+                <svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg>
+              </div>
+              <div class="kpi-card" data-metric="fps">
+                <p class="kpi-label">FPS</p>
+                <p class="kpi-value">--</p>
+                <svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg>
+              </div>
+              <div class="kpi-card" data-metric="health">
+                <p class="kpi-label">Service Health</p>
+                <p class="kpi-value">--</p>
+                <svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg>
+              </div>
+              <div class="kpi-card" data-metric="host_cpu">
+                <p class="kpi-label">Host CPU %</p>
+                <p class="kpi-value">--</p>
+                <svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg>
+              </div>
+              <div class="kpi-card" data-metric="host_mem">
+                <p class="kpi-label">Host Memory %</p>
+                <p class="kpi-value">--</p>
+                <svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg>
+              </div>
+              <div class="kpi-card" data-metric="host_disk">
+                <p class="kpi-label">Root Disk %</p>
+                <p class="kpi-value">--</p>
+                <svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg>
+              </div>
+              <div class="kpi-card" data-metric="firing_alerts">
+                <p class="kpi-label">Firing Alerts</p>
+                <p class="kpi-value">--</p>
+                <svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-title-row">
+              <h2>Dashboards</h2>
+              <div class="dashboard-toolbar">
+                <div class="dashboard-tabs" id="dashboard-tabs">
+                  <button
+                    class="dash-tab is-active"
+                    type="button"
+                    data-src="/api/grafana/d/uav-system-overview/uav-system-overview?orgId=1&kiosk"
+                  >
+                    System
+                  </button>
+                  <button
+                    class="dash-tab"
+                    type="button"
+                    data-src="/api/grafana/d/uav-training-inference/uav-training-inference?orgId=1&kiosk"
+                  >
+                    Training
+                  </button>
+                  <button
+                    class="dash-tab"
+                    type="button"
+                    data-src="/api/grafana/d/uav-resource-control/uav-resource-control?orgId=1&kiosk"
+                  >
+                    Resources
+                  </button>
+                </div>
+                <div class="dashboard-meta">
+                  <a id="dashboard-open" href="/api/grafana/" target="_blank" rel="noreferrer">Open full</a>
+                  <button id="dashboard-reload" class="btn btn-inline" type="button">Reload</button>
+                  <span id="dashboard-status" class="hint dash-status">Loading dashboard...</span>
+                </div>
+              </div>
+            </div>
+            <div class="dashboard-shell" id="dashboard-shell">
+              <div id="dashboard-loader" class="dashboard-loader">Loading dashboard...</div>
+              <iframe id="dashboard-frame" title="Grafana Dashboard" loading="lazy"></iframe>
+            </div>
+          </article>
+        </section>
+
+        <section class="tab-pane tab-pane-grid" id="tab-training">
+          <article class="panel">
+            <div class="panel-title-row">
+              <h2>Fine-Tuning Studio</h2>
+              <span class="tag">Manual</span>
+            </div>
+            <form id="tuning-form" class="form-grid">
+              <label>
+                Model
+                <select name="model_name">
+                  <option value="yolos_tiny">YOLOS Tiny</option>
+                  <option value="detr_resnet50">DETR ResNet50</option>
+                  <option value="custom_model_template">Custom Architecture</option>
+                </select>
+              </label>
+              <label>
+                Learning Rate
+                <input type="number" step="0.00001" min="0.00001" value="0.0002" name="lr" />
+              </label>
+              <label>
+                Epochs
+                <input type="number" min="1" max="400" value="80" name="epochs" />
+              </label>
+              <label>
+                Batch Size
+                <input type="number" min="1" max="128" value="12" name="batch_size" />
+              </label>
+              <label>
+                Confidence Threshold
+                <input type="range" min="0.05" max="0.95" step="0.01" value="0.28" name="conf" />
+              </label>
+              <label>
+                Target Condition
+                <select name="condition">
+                  <option value="all">all conditions</option>
+                  <option value="fog_low_visibility">fog / low visibility</option>
+                  <option value="rain_glare">rain + glare</option>
+                  <option value="night_fast_maneuvers">night + fast maneuvers</option>
+                </select>
+              </label>
+            </form>
+            <div class="inline-actions">
+              <button id="apply-manual" class="btn btn-primary" type="button">Apply Manual Plan</button>
+              <button id="copy-manual" class="btn" type="button">Copy Config</button>
+            </div>
+            <pre id="manual-config" class="code-box"></pre>
+          </article>
+
+          <article class="panel">
+            <div class="panel-title-row">
+              <h2>Auto Tuning</h2>
+              <span class="tag">Adaptive</span>
+            </div>
+            <div class="form-grid">
+              <label>
+                Strategy
+                <select id="auto-strategy">
+                  <option value="bayesian">Bayesian search</option>
+                  <option value="grid">Grid search</option>
+                  <option value="population">Population based training</option>
+                </select>
+              </label>
+              <label>
+                Objective
+                <select id="auto-objective">
+                  <option value="map50">maximize mAP50</option>
+                  <option value="latency">minimize latency</option>
+                  <option value="fps">maximize FPS</option>
+                </select>
+              </label>
+              <label>
+                Trials
+                <input id="auto-trials" type="range" min="4" max="32" value="12" />
+              </label>
+              <label>
+                Early Stop (epochs)
+                <input id="auto-early-stop" type="number" min="1" max="30" value="7" />
+              </label>
+            </div>
+            <div class="inline-actions">
+              <button id="build-auto-plan" class="btn btn-accent" type="button">Generate Auto Plan</button>
+            </div>
+            <div class="table-shell">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Trial</th>
+                    <th>LR</th>
+                    <th>Batch</th>
+                    <th>Augment</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="auto-plan-body"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="panel span-all">
+            <div class="panel-title-row">
+              <h2>CI/CD Pipeline</h2>
+              <span class="tag">Control</span>
+            </div>
+            <ol id="pipeline-steps" class="pipeline">
+              <li class="pipeline-step">Commit and lint</li>
+              <li class="pipeline-step">Container build</li>
+              <li class="pipeline-step">Unit tests</li>
+              <li class="pipeline-step">Validation run</li>
+              <li class="pipeline-step">Metrics gate</li>
+              <li class="pipeline-step">Deploy manifests</li>
+            </ol>
+            <div class="inline-actions">
+              <button id="run-pipeline" class="btn btn-primary" type="button">Run Pipeline</button>
+              <button id="reset-pipeline" class="btn" type="button">Reset</button>
+            </div>
+            <p id="pipeline-status" class="hint">Pipeline is idle.</p>
+          </article>
+        </section>
+
+        <section class="tab-pane tab-pane-grid" id="tab-resources">
+          <article class="panel">
+            <div class="panel-title-row">
+              <h2>Resource Governance</h2>
+              <span class="tag">Capacity</span>
+            </div>
+            <div class="form-grid">
+              <label>
+                Profile
+                <select id="resource-profile">
+                  <option value="balanced">balanced</option>
+                  <option value="training">training-heavy</option>
+                  <option value="inference">inference-heavy</option>
+                  <option value="eco">eco mode</option>
+                </select>
+              </label>
+              <label>
+                CPU Multiplier
+                <input id="resource-cpu-multiplier" type="range" min="0.5" max="2" step="0.1" value="1" />
+              </label>
+              <label>
+                Memory Multiplier
+                <input id="resource-mem-multiplier" type="range" min="0.5" max="2" step="0.1" value="1" />
+              </label>
+              <label>
+                Critical Reservation %
+                <input id="resource-reservation" type="number" min="30" max="90" value="50" />
+              </label>
+            </div>
+            <div class="inline-actions">
+              <button id="generate-resource-plan" class="btn btn-accent" type="button">Generate Override</button>
+              <button id="copy-resource-plan" class="btn" type="button">Copy Override</button>
+            </div>
+            <pre id="resource-override" class="code-box"></pre>
+          </article>
+
+          <article class="panel">
+            <div class="panel-title-row">
+              <h2>Container and Process Consumption</h2>
+              <span class="tag">Deep Monitor</span>
+            </div>
+            <div class="usage-grid">
+              <div class="table-shell usage-card">
+                <h3>Containers</h3>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Container</th>
+                      <th>CPU %</th>
+                      <th>Memory MB</th>
+                      <th>Net RX KB/s</th>
+                    </tr>
+                  </thead>
+                  <tbody id="container-usage-body"></tbody>
+                </table>
+              </div>
+              <div class="table-shell usage-card">
+                <h3>Processes</h3>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Process</th>
+                      <th>CPU %</th>
+                      <th>Memory MB</th>
+                      <th>Threads</th>
+                    </tr>
+                  </thead>
+                  <tbody id="process-usage-body"></tbody>
+                </table>
+              </div>
+            </div>
+            <p id="usage-updated-at" class="hint">Awaiting resource metrics...</p>
+          </article>
+        </section>
+
+        <section class="tab-pane tab-pane-grid" id="tab-operations">
+          <article class="panel">
+            <div class="panel-title-row">
+              <h2>Process Control</h2>
+              <span class="tag">Command Center</span>
+            </div>
+            <div class="quick-actions">
+              <button class="btn action-btn" data-command="uav-vit train --config configs/experiments/yolos_tiny.yaml">
+                Build training command
+              </button>
+              <button class="btn action-btn" data-command="uav-vit evaluate --config configs/experiments/yolos_tiny.yaml --split test">
+                Build evaluation command
+              </button>
+              <button class="btn action-btn" data-command="bash scripts/k8s_apply.sh">
+                Build deployment command
+              </button>
+            </div>
+            <pre id="command-preview" class="code-box">Select an action to generate a command.</pre>
+          </article>
+
+          <article class="panel">
+            <div class="panel-title-row">
+              <h2>Service Gateway</h2>
+              <span class="tag">Access</span>
+            </div>
+            <div class="link-grid">
+              <a href="/api/grafana/" target="_blank" rel="noreferrer">Open Grafana</a>
+              <a href="/api/prometheus/" target="_blank" rel="noreferrer">Open Prometheus</a>
+              <a href="/api/mlflow/" target="_blank" rel="noreferrer">Open MLflow</a>
+              <a href="/api/alertmanager/" target="_blank" rel="noreferrer">Open Alertmanager</a>
+              <a href="/api/minio/" target="_blank" rel="noreferrer">Open MinIO API</a>
+              <a href="/api/minio-console/" target="_blank" rel="noreferrer">Open MinIO Console</a>
+              <a href="/api/pushgateway/" target="_blank" rel="noreferrer">Open Pushgateway</a>
+              <a href="/api/blackbox-exporter/" target="_blank" rel="noreferrer">Open Blackbox</a>
+              <a href="/api/cadvisor/" target="_blank" rel="noreferrer">Open cAdvisor</a>
+              <a href="/api/node-exporter/" target="_blank" rel="noreferrer">Open Node Exporter</a>
+              <a href="/api/process-exporter/" target="_blank" rel="noreferrer">Open Process Exporter</a>
+              <a href="/api/postgres-exporter/" target="_blank" rel="noreferrer">Open Postgres Exporter</a>
+              <a href="/api/torchserve/" target="_blank" rel="noreferrer">Open TorchServe Inference</a>
+              <a href="/api/torchserve-mgmt/" target="_blank" rel="noreferrer">Open TorchServe Mgmt</a>
+              <a href="/api/torchserve-metrics/" target="_blank" rel="noreferrer">Open TorchServe Metrics</a>
+            </div>
+          </article>
+        </section>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>UI mode does not start training or inference automatically. Use profiles when needed.</p>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>

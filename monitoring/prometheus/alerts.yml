@@ -1,0 +1,73 @@
+groups:
+  - name: uav-resource-health
+    interval: 30s
+    rules:
+      - alert: HostHighCPU
+        expr: (100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)) > 85
+        for: 5m
+        labels:
+          severity: warning
+          scope: host
+        annotations:
+          summary: "High host CPU usage"
+          description: "CPU usage is above 85% for at least 5 minutes on {{ $labels.instance }}."
+
+      - alert: HostHighMemory
+        expr: ((1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100) > 90
+        for: 5m
+        labels:
+          severity: warning
+          scope: host
+        annotations:
+          summary: "High host memory usage"
+          description: "Memory utilization is above 90% for at least 5 minutes on {{ $labels.instance }}."
+
+      - alert: HostLowDiskSpace
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) * 100 < 15
+        for: 10m
+        labels:
+          severity: critical
+          scope: host
+        annotations:
+          summary: "Low disk space"
+          description: "Disk free space is below 15% on {{ $labels.instance }} ({{ $labels.mountpoint }})."
+
+      - alert: ContainerCPUThrottled
+        expr: (sum by (name) (rate(container_cpu_usage_seconds_total{name!=""}[5m])) / clamp_min(sum by (name) (container_spec_cpu_quota{name!=""} / container_spec_cpu_period{name!=""}), 0.001)) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          scope: container
+        annotations:
+          summary: "Container CPU saturation"
+          description: "Container {{ $labels.name }} is above 90% of CPU limit for 5 minutes."
+
+      - alert: ContainerMemoryNearLimit
+        expr: (sum by (name) (container_memory_working_set_bytes{name!=""}) / clamp_min(sum by (name) (container_spec_memory_limit_bytes{name!=""}), 1)) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          scope: container
+        annotations:
+          summary: "Container memory near limit"
+          description: "Container {{ $labels.name }} exceeded 90% of memory limit for 5 minutes."
+
+      - alert: ServiceEndpointDown
+        expr: probe_success{job="blackbox-http"} < 1
+        for: 2m
+        labels:
+          severity: critical
+          scope: service
+        annotations:
+          summary: "Service endpoint is down"
+          description: "{{ $labels.instance }} is unavailable according to blackbox probe."
+
+      - alert: PrometheusTargetDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+          scope: scrape
+        annotations:
+          summary: "Scrape target is down"
+          description: "Prometheus cannot scrape {{ $labels.job }} ({{ $labels.instance }})."

@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: uav-train
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: trainer
+          image: your-registry/uav-vit-trainer:latest
+          command:
+            - uav-vit
+            - train
+            - --config
+            - configs/experiments/yolos_tiny.yaml
+          env:
+            - name: MLFLOW_TRACKING_URI
+              value: http://mlflow:5000
+            - name: MLFLOW_EXPERIMENT_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: uav-mlops-config
+                  key: MLFLOW_EXPERIMENT_NAME
+            - name: PUSHGATEWAY_URL
+              value: http://pushgateway:9091
+          volumeMounts:
+            - name: train-data
+              mountPath: /app/data
+            - name: runs
+              mountPath: /app/runs
+          resources:
+            requests:
+              cpu: "2"
+              memory: "8Gi"
+            limits:
+              cpu: "4"
+              memory: "16Gi"
+      volumes:
+        - name: train-data
+          persistentVolumeClaim:
+            claimName: train-data-pvc
+        - name: runs
+          persistentVolumeClaim:
+            claimName: runs-pvc

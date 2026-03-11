@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: torchserve
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: torchserve
+  template:
+    metadata:
+      labels:
+        app: torchserve
+    spec:
+      containers:
+        - name: torchserve
+          image: your-registry/uav-vit-torchserve:latest
+          ports:
+            - containerPort: 8080
+            - containerPort: 8081
+            - containerPort: 8082
+          env:
+            - name: TS_CONFIG_FILE
+              value: /home/model-server/config/config.properties
+            - name: TS_SCORE_THRESHOLD
+              value: "0.2"
+          volumeMounts:
+            - name: model-store
+              mountPath: /home/model-server/model-store
+            - name: torchserve-config
+              mountPath: /home/model-server/config/config.properties
+              subPath: config.properties
+      volumes:
+        - name: model-store
+          persistentVolumeClaim:
+            claimName: model-store-pvc
+        - name: torchserve-config
+          configMap:
+            name: torchserve-config

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: torchserve
+spec:
+  selector:
+    app: torchserve
+  ports:
+    - name: inference
+      port: 8080
+      targetPort: 8080
+    - name: management
+      port: 8081
+      targetPort: 8081
+    - name: metrics
+      port: 8082
+      targetPort: 8082

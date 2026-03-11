@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: uav-mlops-config
+data:
+  MLFLOW_PORT: "5000"
+  MLFLOW_BUCKET_NAME: "mlflow"
+  MLFLOW_S3_ENDPOINT_URL: "http://minio:9000"
+  AWS_DEFAULT_REGION: "us-east-1"
+  MLFLOW_EXPERIMENT_NAME: "uav-vit-thesis"

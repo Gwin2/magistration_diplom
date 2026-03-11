@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: uav-evaluate
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: evaluator
+          image: your-registry/uav-vit-trainer:latest
+          command:
+            - uav-vit
+            - evaluate
+            - --config
+            - configs/experiments/yolos_tiny.yaml
+            - --split
+            - test
+          env:
+            - name: MLFLOW_TRACKING_URI
+              value: http://mlflow:5000
+            - name: MLFLOW_EXPERIMENT_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: uav-mlops-config
+                  key: MLFLOW_EXPERIMENT_NAME
+            - name: PUSHGATEWAY_URL
+              value: http://pushgateway:9091
+          volumeMounts:
+            - name: train-data
+              mountPath: /app/data
+            - name: runs
+              mountPath: /app/runs
+      volumes:
+        - name: train-data
+          persistentVolumeClaim:
+            claimName: train-data-pvc
+        - name: runs
+          persistentVolumeClaim:
+            claimName: runs-pvc

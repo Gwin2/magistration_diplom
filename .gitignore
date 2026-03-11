@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual env
+.venv/
+venv/
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# Data and artifacts
+data/
+runs/
+reports/
+checkpoints/
+*.pt
+*.onnx
+*.engine
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Logs
+*.log
