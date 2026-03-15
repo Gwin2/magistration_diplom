@@ -1,74 +1,75 @@
-# Grafana Web View
+﻿# Grafana Web View
 
-Документ описывает, какие метрики и процессы визуализируются в Grafana и откуда берутся данные.
+Документ описывает встроенные Grafana dashboards, их источники данных и маршрут доступа через UI.
 
 ## Источники данных
 
-- Prometheus datasource (`uid=prometheus`)
-- Pushgateway: live-метрики train/eval из Python-пайплайна
-- Run Metrics Exporter: агрегированные метрики из `runs/*/metrics.csv`
-- Blackbox exporter: доступность сервисов (`mlflow`, `minio`, `torchserve`, `grafana`, `ui`)
-- Postgres exporter: состояние БД метаданных MLflow
-- cAdvisor + node-exporter (docker compose): контейнерные и хостовые ресурсы
-- Process Exporter: потребление CPU/RAM/threads по процессам
-- Alertmanager: централизованная маршрутизация алертов Prometheus
+- `Prometheus` (`uid=prometheus`) — основной datasource
+- `Pushgateway` — live-метрики train/eval
+- `run-metrics-exporter` — агрегаты из `runs/*/metrics.csv`
+- `blackbox-exporter` — доступность сервисов
+- `postgres-exporter` — состояние MLflow metadata DB
+- `cadvisor` и `node-exporter` — контейнерные и host metrics
+- `process-exporter` — CPU/RAM/threads по процессам
+- `Alertmanager` — активные алерты и их маршрутизация
 
-## Split UI Control Center
+## Доступ
 
-`http://localhost:${UI_HOST_PORT}` (`18090`) — разделенный web-интерфейс для операционного управления:
-
-- ручное дообучение (гиперпараметры + генерация конфига)
-- автонастройка (план trial-ов)
-- контроль CI/CD этапов
-- контроль процесса и команды запуска
-- live KPI + встраивание Grafana-дешбордов
-- отдельные таблицы по контейнерам и процессам (CPU/RAM/network/threads)
-- доступ ко всем HTTP-сервисам стека через UI proxy (`/api/...`)
-
-## Дашборды
-
-## 1) UAV System Overview
-
-Показывает состояние инфраструктуры:
-
-- доступность endpoints (`probe_success`)
-- загрузка CPU/RAM хоста
-- CPU/RAM контейнеров
-- состояние PostgreSQL
-- количество отслеживаемых run-артефактов
-
-## 2) UAV Training and Inference
-
-Показывает ML-метрики:
-
-- train loss (live + из CSV)
-- `mAP50` на валидации и оценке
-- latency/FPS
-- прогресс по эпохам
-- лучшая checkpoint-метрика
-
-## 3) UAV Resource Control
-
-Дешборд полного контроля ресурсов:
-
-- host CPU/RAM/disk usage
-- активные алерты и доступность сервисов
-- утилизация CPU/RAM контейнеров относительно лимитов
-- network throughput контейнеров
-- топ процессов по CPU и RAM
-
-## URL и доступ
+Прямой доступ:
 
 - Grafana: `http://localhost:${GRAFANA_HOST_PORT}` (`13000`)
 - Prometheus: `http://localhost:${PROMETHEUS_HOST_PORT}` (`19090`)
-- Split UI: `http://localhost:${UI_HOST_PORT}` (`18090`)
-- Alertmanager: `http://localhost:${ALERTMANAGER_HOST_PORT}` (`19093`)
-- Process Exporter: `http://localhost:${PROCESS_EXPORTER_HOST_PORT}` (`19256`)
 
-Логин/пароль Grafana:
+Через Mission Control UI:
 
-- `GRAFANA_ADMIN_USER`
-- `GRAFANA_ADMIN_PASSWORD`
+- Grafana root: `http://localhost:${UI_HOST_PORT}/api/grafana/`
+- health: `http://localhost:${UI_HOST_PORT}/api/grafana/api/health`
+- dashboards открываются встроенно в `Overview`
+
+Grafana настроена на работу из subpath через:
+
+- `GF_SERVER_ROOT_URL`
+- `GF_SERVER_SERVE_FROM_SUB_PATH=true`
+
+## Dashboards
+
+### 1. UAV System Overview
+
+Показывает:
+
+- `probe_success` по сервисам
+- host CPU/RAM
+- базовую загрузку контейнеров
+- состояние PostgreSQL и observability layers
+
+### 2. UAV Training and Inference
+
+Показывает:
+
+- `train loss`
+- `mAP50`, `mAP75`
+- latency/FPS
+- прогресс train/eval runs
+- ключевые inference-метрики
+
+### 3. UAV Resource Control
+
+Показывает:
+
+- host CPU/RAM/disk usage
+- firing alerts
+- container CPU/RAM/network
+- top processes by CPU/RAM/threads
+
+## Встраивание в UI
+
+Во вкладке `Overview` доступен переключатель встроенных dashboards:
+
+- `System`
+- `Training`
+- `Resources`
+
+UI автоматически добавляет параметр темы (`light` или `dark`) к iframe в зависимости от выбранной темы интерфейса.
 
 ## Быстрый запуск
 
@@ -77,10 +78,8 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Для запуска обучения/инференса дополнительно включайте профили:
+Для train/inference сервисов:
 
 ```bash
 docker compose --profile training --profile inference up -d --build
 ```
-
-После запуска откройте Grafana и папку дашбордов `UAV-MLOps`.

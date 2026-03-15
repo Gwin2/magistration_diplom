@@ -1,9 +1,9 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>UAV MLOps Control Center</title>
+    <title>UAV Mission Control</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -20,34 +20,63 @@
     <header class="panel app-header">
       <section class="status-card" aria-label="Service status">
         <div class="block-head">
-          <p class="block-title">Service Status</p>
-          <p class="block-subtitle">Live health of core stack</p>
+          <p class="block-title">Stack Status</p>
+          <p class="block-subtitle">Control plane, observability and serving health</p>
         </div>
-        <div class="status-grid">
-          <div class="status-pill" data-service="mlflow">
-            <span class="dot"></span>
-            <span>MLflow</span>
+        <div class="status-meta">
+          <div class="status-meta-card">
+            <span class="status-meta-label">Online</span>
+            <strong id="status-online-count">0</strong>
           </div>
-          <div class="status-pill" data-service="prometheus">
-            <span class="dot"></span>
-            <span>Prometheus</span>
+          <div class="status-meta-card">
+            <span class="status-meta-label">Offline</span>
+            <strong id="status-offline-count">0</strong>
           </div>
-          <div class="status-pill" data-service="grafana">
-            <span class="dot"></span>
-            <span>Grafana</span>
+          <div class="status-meta-card">
+            <span class="status-meta-label">Running Jobs</span>
+            <strong id="status-running-jobs">0</strong>
           </div>
-          <div class="status-pill" data-service="pushgateway">
-            <span class="dot"></span>
-            <span>Pushgateway</span>
-          </div>
-          <div class="status-pill" data-service="torchserve">
-            <span class="dot"></span>
-            <span>TorchServe</span>
-          </div>
-          <div class="status-pill" data-service="alertmanager">
-            <span class="dot"></span>
-            <span>Alertmanager</span>
-          </div>
+        </div>
+        <div class="status-grid status-grid-wide">
+          <div class="status-pill" data-service="control"><span class="dot"></span><span>Control API</span></div>
+          <div class="status-pill" data-service="mlflow"><span class="dot"></span><span>MLflow</span></div>
+          <div class="status-pill" data-service="prometheus"><span class="dot"></span><span>Prometheus</span></div>
+          <div class="status-pill" data-service="grafana"><span class="dot"></span><span>Grafana</span></div>
+          <div class="status-pill" data-service="tensorboard"><span class="dot"></span><span>TensorBoard</span></div>
+          <div class="status-pill" data-service="pushgateway"><span class="dot"></span><span>Pushgateway</span></div>
+          <div class="status-pill" data-service="torchserve"><span class="dot"></span><span>TorchServe</span></div>
+          <div class="status-pill" data-service="alertmanager"><span class="dot"></span><span>Alertmanager</span></div>
+        </div>
+      </section>
+
+      <section class="ops-card" aria-label="Quick actions">
+        <div class="block-head">
+          <p class="block-title">Quick Actions</p>
+          <p class="block-subtitle">Jump into the next operator task without scrolling</p>
+        </div>
+        <div class="quick-grid">
+          <button class="quick-action" type="button" data-jump-tab="tab-datasets">
+            <span>Dataset Intake</span>
+            <small>Upload archives, attach folders, download prepared sets.</small>
+          </button>
+          <button class="quick-action" type="button" data-jump-tab="tab-studio">
+            <span>Model Studio</span>
+            <small>Edit YAML, build custom architectures and launch runs.</small>
+          </button>
+          <button class="quick-action" type="button" data-jump-tab="tab-experiments">
+            <span>Experiment Desk</span>
+            <small>Track jobs, compare runs, review TensorBoard and notes.</small>
+          </button>
+          <button class="quick-action" type="button" data-jump-tab="tab-serving">
+            <span>Serving Gate</span>
+            <small>Manage TorchServe and reach every service through one UI.</small>
+          </button>
+        </div>
+        <div class="quick-links">
+          <a href="/api/mlflow/" target="_blank" rel="noreferrer">MLflow</a>
+          <a href="/api/grafana/" target="_blank" rel="noreferrer">Grafana</a>
+          <a href="/api/tensorboard/" target="_blank" rel="noreferrer">TensorBoard</a>
+          <a href="/api/control/health" target="_blank" rel="noreferrer">Control API</a>
         </div>
       </section>
 
@@ -62,6 +91,7 @@
             <button class="theme-btn is-active" type="button" data-theme="flight">Flight</button>
             <button class="theme-btn" type="button" data-theme="horizon">Horizon</button>
             <button class="theme-btn" type="button" data-theme="paper">Paper</button>
+            <button class="theme-btn" type="button" data-theme="signal">Signal</button>
           </div>
         </div>
         <div class="appearance-group">
@@ -71,117 +101,100 @@
             <button class="density-btn" type="button" data-density="comfortable">Comfort</button>
           </div>
         </div>
-        <button id="motion-toggle" class="btn btn-ghost" type="button" aria-pressed="false">
-          Motion: on
-        </button>
+        <button id="motion-toggle" class="btn btn-ghost" type="button" aria-pressed="false">Motion: on</button>
       </section>
     </header>
 
     <main class="workspace">
       <aside class="panel nav-panel">
-        <p class="menu-title">Mission Menu</p>
+        <p class="menu-title">Control Surface</p>
         <nav class="tabs-nav" id="tabs-nav">
-          <button class="tab-btn is-active" type="button" data-tab-target="tab-overview">
-            <span>Overview</span>
-            <small>kpi + dashboards</small>
-          </button>
-          <button class="tab-btn" type="button" data-tab-target="tab-training">
-            <span>Training</span>
-            <small>fine-tuning + cicd</small>
-          </button>
-          <button class="tab-btn" type="button" data-tab-target="tab-resources">
-            <span>Resources</span>
-            <small>container/process load</small>
-          </button>
-          <button class="tab-btn" type="button" data-tab-target="tab-operations">
-            <span>Operations</span>
-            <small>commands + service gateway</small>
-          </button>
+          <button class="tab-btn is-active" type="button" data-tab-target="tab-overview"><span>Overview</span><small>stack snapshot + dashboards</small></button>
+          <button class="tab-btn" type="button" data-tab-target="tab-datasets"><span>Datasets</span><small>upload, register, download</small></button>
+          <button class="tab-btn" type="button" data-tab-target="tab-studio"><span>Studio</span><small>configs + model editor</small></button>
+          <button class="tab-btn" type="button" data-tab-target="tab-experiments"><span>Experiments</span><small>tracking + tensorboard + jobs</small></button>
+          <button class="tab-btn" type="button" data-tab-target="tab-serving"><span>Serving</span><small>torchserve + service access</small></button>
+          <button class="tab-btn" type="button" data-tab-target="tab-resources"><span>Resources</span><small>host, containers, governance</small></button>
         </nav>
       </aside>
 
       <section class="tab-content">
         <section class="tab-pane tab-pane-grid is-active" id="tab-overview">
-          <article class="panel panel-compact">
-            <div class="panel-title-row">
-              <h2>Live Metrics</h2>
-              <span class="tag">Prometheus</span>
+          <article class="panel">
+            <div class="panel-title-row"><h2>Mission Snapshot</h2><span class="tag">Native Control</span></div>
+            <div class="mission-hero">
+              <div class="hero-copy">
+                <p class="eyebrow">Operations</p>
+                <h3>Observe, train, compare, serve</h3>
+                <p class="hero-text">
+                  One operator surface for dataset intake, architecture editing, experiment review, TensorBoard, MLflow and TorchServe.
+                </p>
+                <div class="hero-actions">
+                  <button class="btn btn-primary" type="button" data-jump-tab="tab-studio">Open Studio</button>
+                  <button class="btn btn-accent" type="button" data-jump-tab="tab-experiments">Review Runs</button>
+                  <button class="btn" type="button" data-jump-tab="tab-resources">Resource View</button>
+                </div>
+              </div>
+              <div class="hero-aside">
+                <div class="hero-signal">
+                  <p class="hero-kicker">Flight Status</p>
+                  <strong id="hero-health-label">Awaiting telemetry</strong>
+                  <span id="hero-health-note">Health checks and experiment catalog are loading.</span>
+                </div>
+                <div class="hero-mini-grid">
+                  <div class="hero-mini-card">
+                    <span>Tracked runs</span>
+                    <strong id="hero-tracked-runs">0</strong>
+                  </div>
+                  <div class="hero-mini-card">
+                    <span>Running jobs</span>
+                    <strong id="hero-running-jobs">0</strong>
+                  </div>
+                  <div class="hero-mini-card">
+                    <span>Best mAP50</span>
+                    <strong id="hero-best-map50">--</strong>
+                  </div>
+                  <div class="hero-mini-card">
+                    <span>Served models</span>
+                    <strong id="hero-served-models">0</strong>
+                  </div>
+                </div>
+              </div>
             </div>
+            <div class="summary-grid">
+              <div class="summary-card"><p class="summary-label">Datasets</p><p id="summary-datasets" class="summary-value">0</p><p class="summary-note">registered sources</p></div>
+              <div class="summary-card"><p class="summary-label">Configs</p><p id="summary-configs" class="summary-value">0</p><p class="summary-note">editable experiment plans</p></div>
+              <div class="summary-card"><p class="summary-label">Architectures</p><p id="summary-architectures" class="summary-value">0</p><p class="summary-note">builtin + custom models</p></div>
+              <div class="summary-card"><p class="summary-label">Experiments</p><p id="summary-experiments" class="summary-value">0</p><p class="summary-note">local and MLflow tracked</p></div>
+              <div class="summary-card"><p class="summary-label">Jobs</p><p id="summary-jobs" class="summary-value">0</p><p class="summary-note">train/eval lifecycle</p></div>
+              <div class="summary-card"><p class="summary-label">Running</p><p id="summary-running" class="summary-value">0</p><p class="summary-note">active background work</p></div>
+            </div>
+            <div class="subsection-head"><h3>System Recommendations</h3><span class="hint">Best current runs by mAP50, FPS and latency</span></div>
+            <div id="recommendations-list" class="recommendation-list"></div>
+          </article>
+
+          <article class="panel panel-compact">
+            <div class="panel-title-row"><h2>Live Metrics</h2><span class="tag">Prometheus</span></div>
             <div class="kpi-grid">
-              <div class="kpi-card" data-metric="map50">
-                <p class="kpi-label">mAP50</p>
-                <p class="kpi-value">--</p>
-                <svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg>
-              </div>
-              <div class="kpi-card" data-metric="map75">
-                <p class="kpi-label">mAP75</p>
-                <p class="kpi-value">--</p>
-                <svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg>
-              </div>
-              <div class="kpi-card" data-metric="latency">
-                <p class="kpi-label">Latency (ms)</p>
-                <p class="kpi-value">--</p>
-                <svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg>
-              </div>
-              <div class="kpi-card" data-metric="fps">
-                <p class="kpi-label">FPS</p>
-                <p class="kpi-value">--</p>
-                <svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg>
-              </div>
-              <div class="kpi-card" data-metric="health">
-                <p class="kpi-label">Service Health</p>
-                <p class="kpi-value">--</p>
-                <svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg>
-              </div>
-              <div class="kpi-card" data-metric="host_cpu">
-                <p class="kpi-label">Host CPU %</p>
-                <p class="kpi-value">--</p>
-                <svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg>
-              </div>
-              <div class="kpi-card" data-metric="host_mem">
-                <p class="kpi-label">Host Memory %</p>
-                <p class="kpi-value">--</p>
-                <svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg>
-              </div>
-              <div class="kpi-card" data-metric="host_disk">
-                <p class="kpi-label">Root Disk %</p>
-                <p class="kpi-value">--</p>
-                <svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg>
-              </div>
-              <div class="kpi-card" data-metric="firing_alerts">
-                <p class="kpi-label">Firing Alerts</p>
-                <p class="kpi-value">--</p>
-                <svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg>
-              </div>
+              <div class="kpi-card" data-metric="map50"><p class="kpi-label">mAP50</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
+              <div class="kpi-card" data-metric="map75"><p class="kpi-label">mAP75</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
+              <div class="kpi-card" data-metric="latency"><p class="kpi-label">Latency (ms)</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
+              <div class="kpi-card" data-metric="fps"><p class="kpi-label">FPS</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
+              <div class="kpi-card" data-metric="health"><p class="kpi-label">Service Health</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
+              <div class="kpi-card" data-metric="host_cpu"><p class="kpi-label">Host CPU %</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
+              <div class="kpi-card" data-metric="host_mem"><p class="kpi-label">Host Memory %</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
+              <div class="kpi-card" data-metric="firing_alerts"><p class="kpi-label">Firing Alerts</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
             </div>
           </article>
 
-          <article class="panel">
+          <article class="panel span-all">
             <div class="panel-title-row">
               <h2>Dashboards</h2>
               <div class="dashboard-toolbar">
                 <div class="dashboard-tabs" id="dashboard-tabs">
-                  <button
-                    class="dash-tab is-active"
-                    type="button"
-                    data-src="/api/grafana/d/uav-system-overview/uav-system-overview?orgId=1&kiosk"
-                  >
-                    System
-                  </button>
-                  <button
-                    class="dash-tab"
-                    type="button"
-                    data-src="/api/grafana/d/uav-training-inference/uav-training-inference?orgId=1&kiosk"
-                  >
-                    Training
-                  </button>
-                  <button
-                    class="dash-tab"
-                    type="button"
-                    data-src="/api/grafana/d/uav-resource-control/uav-resource-control?orgId=1&kiosk"
-                  >
-                    Resources
-                  </button>
+                  <button class="dash-tab is-active" type="button" data-src="/api/grafana/d/uav-system-overview/uav-system-overview?orgId=1&kiosk">System</button>
+                  <button class="dash-tab" type="button" data-src="/api/grafana/d/uav-training-inference/uav-training-inference?orgId=1&kiosk">Training</button>
+                  <button class="dash-tab" type="button" data-src="/api/grafana/d/uav-resource-control/uav-resource-control?orgId=1&kiosk">Resources</button>
                 </div>
                 <div class="dashboard-meta">
                   <a id="dashboard-open" href="/api/grafana/" target="_blank" rel="noreferrer">Open full</a>
@@ -197,250 +210,222 @@
           </article>
         </section>
 
-        <section class="tab-pane tab-pane-grid" id="tab-training">
+        <section class="tab-pane tab-pane-grid" id="tab-datasets">
           <article class="panel">
-            <div class="panel-title-row">
-              <h2>Fine-Tuning Studio</h2>
-              <span class="tag">Manual</span>
-            </div>
-            <form id="tuning-form" class="form-grid">
-              <label>
-                Model
-                <select name="model_name">
-                  <option value="yolos_tiny">YOLOS Tiny</option>
-                  <option value="detr_resnet50">DETR ResNet50</option>
-                  <option value="custom_model_template">Custom Architecture</option>
-                </select>
-              </label>
-              <label>
-                Learning Rate
-                <input type="number" step="0.00001" min="0.00001" value="0.0002" name="lr" />
-              </label>
-              <label>
-                Epochs
-                <input type="number" min="1" max="400" value="80" name="epochs" />
-              </label>
-              <label>
-                Batch Size
-                <input type="number" min="1" max="128" value="12" name="batch_size" />
-              </label>
-              <label>
-                Confidence Threshold
-                <input type="range" min="0.05" max="0.95" step="0.01" value="0.28" name="conf" />
-              </label>
-              <label>
-                Target Condition
-                <select name="condition">
-                  <option value="all">all conditions</option>
-                  <option value="fog_low_visibility">fog / low visibility</option>
-                  <option value="rain_glare">rain + glare</option>
-                  <option value="night_fast_maneuvers">night + fast maneuvers</option>
-                </select>
-              </label>
+            <div class="panel-title-row"><h2>Dataset Intake</h2><span class="tag">Upload + Register</span></div>
+            <form id="dataset-upload-form" class="form-grid">
+              <label>Dataset name<input name="dataset_name" type="text" placeholder="uav_night_fog_v1" /></label>
+              <label>Archive<input name="file" type="file" accept=".zip,.tar,.gz,.tgz" /></label>
+              <label>Tags<input name="tags" type="text" placeholder="night, fog, drone" /></label>
+              <label class="wide-field">Description<textarea name="description" rows="4" placeholder="What conditions and annotations are inside?"></textarea></label>
             </form>
-            <div class="inline-actions">
-              <button id="apply-manual" class="btn btn-primary" type="button">Apply Manual Plan</button>
-              <button id="copy-manual" class="btn" type="button">Copy Config</button>
-            </div>
-            <pre id="manual-config" class="code-box"></pre>
-          </article>
-
-          <article class="panel">
-            <div class="panel-title-row">
-              <h2>Auto Tuning</h2>
-              <span class="tag">Adaptive</span>
-            </div>
-            <div class="form-grid">
-              <label>
-                Strategy
-                <select id="auto-strategy">
-                  <option value="bayesian">Bayesian search</option>
-                  <option value="grid">Grid search</option>
-                  <option value="population">Population based training</option>
-                </select>
-              </label>
-              <label>
-                Objective
-                <select id="auto-objective">
-                  <option value="map50">maximize mAP50</option>
-                  <option value="latency">minimize latency</option>
-                  <option value="fps">maximize FPS</option>
-                </select>
-              </label>
-              <label>
-                Trials
-                <input id="auto-trials" type="range" min="4" max="32" value="12" />
-              </label>
-              <label>
-                Early Stop (epochs)
-                <input id="auto-early-stop" type="number" min="1" max="30" value="7" />
-              </label>
-            </div>
-            <div class="inline-actions">
-              <button id="build-auto-plan" class="btn btn-accent" type="button">Generate Auto Plan</button>
-            </div>
-            <div class="table-shell">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Trial</th>
-                    <th>LR</th>
-                    <th>Batch</th>
-                    <th>Augment</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody id="auto-plan-body"></tbody>
-              </table>
-            </div>
+            <div class="inline-actions"><button id="dataset-upload-btn" class="btn btn-primary" type="button">Upload Archive</button></div>
+            <div class="subsection-head"><h3>Register Existing Folder</h3><span class="hint">Attach already available data without copying</span></div>
+            <form id="dataset-register-form" class="form-grid">
+              <label>Name<input name="name" type="text" placeholder="uav_processed_set" /></label>
+              <label>Path<input name="path" type="text" placeholder="data/processed/uav_coco" /></label>
+              <label>Tags<input name="tags" type="text" placeholder="processed, coco" /></label>
+              <label class="wide-field">Description<textarea name="description" rows="4" placeholder="Optional notes for the team"></textarea></label>
+            </form>
+            <div class="inline-actions"><button id="dataset-register-btn" class="btn btn-accent" type="button">Register Path</button></div>
+            <p id="dataset-status" class="hint">Dataset intake is ready.</p>
           </article>
 
           <article class="panel span-all">
             <div class="panel-title-row">
-              <h2>CI/CD Pipeline</h2>
-              <span class="tag">Control</span>
+              <h2>Dataset Library</h2>
+              <div class="toolbar-inline">
+                <input id="dataset-search" type="text" placeholder="Filter by name, path or tag" />
+                <button id="datasets-refresh" class="btn btn-inline" type="button">Refresh</button>
+              </div>
             </div>
-            <ol id="pipeline-steps" class="pipeline">
-              <li class="pipeline-step">Commit and lint</li>
-              <li class="pipeline-step">Container build</li>
-              <li class="pipeline-step">Unit tests</li>
-              <li class="pipeline-step">Validation run</li>
-              <li class="pipeline-step">Metrics gate</li>
-              <li class="pipeline-step">Deploy manifests</li>
-            </ol>
+            <div id="dataset-list" class="dataset-grid"></div>
+          </article>
+        </section>
+
+        <section class="tab-pane tab-pane-grid" id="tab-studio">
+          <article class="panel">
+            <div class="panel-title-row"><h2>Experiment Configs</h2><span id="config-active-badge" class="tag">No config</span></div>
+            <div class="toolbar-inline">
+              <input id="config-search" type="text" placeholder="Filter configs" />
+              <button id="config-new" class="btn btn-inline" type="button">New</button>
+              <button id="configs-refresh" class="btn btn-inline" type="button">Refresh</button>
+            </div>
+            <div id="config-list" class="library-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-title-row"><h2>Config Editor</h2><span class="tag">YAML</span></div>
+            <div class="form-grid"><label>Config name<input id="config-name" type="text" placeholder="new_experiment" /></label></div>
+            <textarea id="config-editor" class="editor code-editor" rows="20" spellcheck="false"></textarea>
             <div class="inline-actions">
-              <button id="run-pipeline" class="btn btn-primary" type="button">Run Pipeline</button>
-              <button id="reset-pipeline" class="btn" type="button">Reset</button>
+              <button id="config-save" class="btn btn-primary" type="button">Save Config</button>
+              <button id="config-copy" class="btn" type="button">Copy YAML</button>
             </div>
-            <p id="pipeline-status" class="hint">Pipeline is idle.</p>
+            <p id="config-status" class="hint">Load or create a config to start.</p>
+          </article>
+
+          <article class="panel">
+            <div class="panel-title-row"><h2>Architecture Library</h2><span id="architecture-active-badge" class="tag">No model</span></div>
+            <div class="toolbar-inline">
+              <input id="architecture-search" type="text" placeholder="Filter architectures" />
+              <button id="architecture-new" class="btn btn-inline" type="button">New</button>
+              <button id="architectures-refresh" class="btn btn-inline" type="button">Refresh</button>
+            </div>
+            <div id="architecture-list" class="library-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-title-row"><h2>Architecture Editor</h2><span class="tag">Code + Template</span></div>
+            <div class="form-grid">
+              <label>Name<input id="architecture-name" type="text" placeholder="my_detector" /></label>
+              <label>Tags<input id="architecture-tags" type="text" placeholder="vit, custom, research" /></label>
+              <label class="wide-field">Description<textarea id="architecture-description" rows="3" placeholder="How this architecture differs from baseline"></textarea></label>
+              <label class="wide-field">Default config YAML<textarea id="architecture-config" class="editor mini-editor" rows="10" spellcheck="false"></textarea></label>
+            </div>
+            <label class="wide-field">Source code<textarea id="architecture-source" class="editor code-editor" rows="16" spellcheck="false"></textarea></label>
+            <div class="inline-actions">
+              <button id="architecture-save" class="btn btn-primary" type="button">Save Architecture</button>
+              <button id="architecture-use-config" class="btn" type="button">Load Template to Config Editor</button>
+            </div>
+            <p id="architecture-status" class="hint">Builtin and custom models are editable here.</p>
+          </article>
+
+          <article class="panel span-all">
+            <div class="panel-title-row"><h2>Launch Control</h2><span class="tag">Train / Evaluate</span></div>
+            <div class="form-grid">
+              <label>Save current YAML as<input id="launch-save-as" type="text" placeholder="optional_config_name" /></label>
+              <label>Eval split<select id="launch-split"><option value="test">test</option><option value="val">val</option></select></label>
+            </div>
+            <div class="inline-actions">
+              <button id="launch-train" class="btn btn-primary" type="button">Start Training</button>
+              <button id="launch-evaluate" class="btn btn-accent" type="button">Run Evaluation</button>
+              <a class="btn btn-link" href="/api/mlflow/" target="_blank" rel="noreferrer">MLflow</a>
+            </div>
+            <p id="studio-status" class="hint">Current config editor content is used as the launch payload.</p>
+          </article>
+        </section>
+
+        <section class="tab-pane tab-pane-grid" id="tab-experiments">
+          <article class="panel span-all">
+            <div class="panel-title-row"><h2>Experiment Registry</h2><span class="tag">MLflow + Local Runs</span></div>
+            <div class="form-grid filters-grid">
+              <label>Search<input id="experiment-search" type="text" placeholder="run name, model, tag" /></label>
+              <label>Model<select id="experiment-model-filter"><option value="">all</option></select></label>
+              <label>Status<select id="experiment-status-filter"><option value="">all</option><option value="running">running</option><option value="completed">completed</option><option value="finished">finished</option><option value="failed">failed</option></select></label>
+              <label>Min mAP50<input id="experiment-min-map50" type="number" min="0" max="1" step="0.01" placeholder="0.40" /></label>
+            </div>
+            <div class="inline-actions"><button id="experiments-refresh" class="btn btn-inline" type="button">Refresh</button></div>
+            <div class="table-shell scroll-table">
+              <table>
+                <thead><tr><th>Compare</th><th>Run</th><th>Model</th><th>Status</th><th>mAP50</th><th>FPS</th><th>Latency</th><th>Rating</th><th>Tags</th></tr></thead>
+                <tbody id="experiments-body"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="panel"><div class="panel-title-row"><h2>Compare Runs</h2><span class="tag">Selected</span></div><div id="compare-shell" class="table-shell"></div></article>
+
+          <article class="panel">
+            <div class="panel-title-row"><h2>Experiment Admin</h2><span id="experiment-selected-badge" class="tag">No selection</span></div>
+            <div class="form-grid">
+              <label>Tags<input id="experiment-tags" type="text" placeholder="best, night, low-latency" /></label>
+              <label>Rating<select id="experiment-rating"><option value="">unset</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label>
+              <label class="wide-field">Note<textarea id="experiment-note" rows="5" placeholder="Observations, risks, deployment notes"></textarea></label>
+            </div>
+            <div class="inline-actions">
+              <button id="experiment-save-meta" class="btn btn-primary" type="button">Save Metadata</button>
+              <a class="btn btn-link" href="/api/mlflow/" target="_blank" rel="noreferrer">Open MLflow</a>
+            </div>
+            <p id="experiment-meta-status" class="hint">Select a run to edit tags, rating and notes.</p>
+          </article>
+
+          <article class="panel"><div class="panel-title-row"><h2>Jobs</h2><span class="tag">Lifecycle</span></div><div id="job-list" class="job-list"></div></article>
+
+          <article class="panel">
+            <div class="panel-title-row"><h2>Job Console</h2><div class="toolbar-inline"><span id="job-log-label" class="hint">Select a job</span><button id="job-log-refresh" class="btn btn-inline" type="button">Refresh</button></div></div>
+            <pre id="job-log-output" class="code-box log-box">No job selected.</pre>
+          </article>
+
+          <article class="panel span-all">
+            <div class="panel-title-row"><h2>TensorBoard</h2><div class="dashboard-meta"><a href="/api/tensorboard/" target="_blank" rel="noreferrer">Open full</a><button id="tensorboard-reload" class="btn btn-inline" type="button">Reload</button><span id="tensorboard-status" class="hint">Checking TensorBoard...</span></div></div>
+            <div class="dashboard-shell" id="tensorboard-shell"><div id="tensorboard-loader" class="dashboard-loader">Loading TensorBoard...</div><iframe id="tensorboard-frame" title="TensorBoard" loading="lazy"></iframe></div>
+          </article>
+        </section>
+
+        <section class="tab-pane tab-pane-grid" id="tab-serving">
+          <article class="panel">
+            <div class="panel-title-row"><h2>TorchServe Registry</h2><span class="tag">Admin</span></div>
+            <div class="form-grid">
+              <label>Model name<input id="torchserve-model-name" type="text" placeholder="uav_detector" /></label>
+              <label>Archive file<input id="torchserve-archive-file" type="text" placeholder="uav_detector.mar" /></label>
+              <label>Initial workers<input id="torchserve-workers" type="number" min="1" max="8" value="1" /></label>
+            </div>
+            <div class="inline-actions"><button id="torchserve-register" class="btn btn-primary" type="button">Register Model</button><button id="torchserve-refresh" class="btn" type="button">Refresh Registry</button></div>
+            <p id="torchserve-status" class="hint">TorchServe status will appear here.</p>
+            <div id="torchserve-models" class="library-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-title-row"><h2>Inference Probe</h2><span class="tag">Predict</span></div>
+            <div class="form-grid">
+              <label>Model name<input id="inference-model-name" type="text" placeholder="uav_detector" /></label>
+              <label>Image<input id="inference-file" type="file" accept="image/*" /></label>
+            </div>
+            <div class="inline-actions"><button id="run-inference" class="btn btn-accent" type="button">Run Inference</button></div>
+            <pre id="inference-output" class="code-box">Inference results will appear here.</pre>
+          </article>
+
+          <article class="panel span-all">
+            <div class="panel-title-row"><h2>Service Gateway</h2><span class="tag">Direct Access</span></div>
+            <div class="link-grid rich-links">
+              <a href="/api/control/health" target="_blank" rel="noreferrer">Control API</a>
+              <a href="/api/mlflow/" target="_blank" rel="noreferrer">MLflow</a>
+              <a href="/api/tensorboard/" target="_blank" rel="noreferrer">TensorBoard</a>
+              <a href="/api/grafana/" target="_blank" rel="noreferrer">Grafana</a>
+              <a href="/api/prometheus/" target="_blank" rel="noreferrer">Prometheus</a>
+              <a href="/api/alertmanager/" target="_blank" rel="noreferrer">Alertmanager</a>
+              <a href="/api/torchserve/" target="_blank" rel="noreferrer">TorchServe Inference</a>
+              <a href="/api/torchserve-mgmt/" target="_blank" rel="noreferrer">TorchServe Mgmt</a>
+              <a href="/api/torchserve-metrics/" target="_blank" rel="noreferrer">TorchServe Metrics</a>
+              <a href="/api/minio/" target="_blank" rel="noreferrer">MinIO API</a>
+              <a href="/api/minio-console/" target="_blank" rel="noreferrer">MinIO Console</a>
+              <a href="/api/pushgateway/" target="_blank" rel="noreferrer">Pushgateway</a>
+              <a href="/api/blackbox-exporter/" target="_blank" rel="noreferrer">Blackbox</a>
+              <a href="/api/cadvisor/" target="_blank" rel="noreferrer">cAdvisor</a>
+              <a href="/api/node-exporter/" target="_blank" rel="noreferrer">Node Exporter</a>
+              <a href="/api/process-exporter/" target="_blank" rel="noreferrer">Process Exporter</a>
+              <a href="/api/postgres-exporter/" target="_blank" rel="noreferrer">Postgres Exporter</a>
+            </div>
           </article>
         </section>
 
         <section class="tab-pane tab-pane-grid" id="tab-resources">
           <article class="panel">
-            <div class="panel-title-row">
-              <h2>Resource Governance</h2>
-              <span class="tag">Capacity</span>
-            </div>
+            <div class="panel-title-row"><h2>Resource Governance</h2><span class="tag">Capacity</span></div>
             <div class="form-grid">
-              <label>
-                Profile
-                <select id="resource-profile">
-                  <option value="balanced">balanced</option>
-                  <option value="training">training-heavy</option>
-                  <option value="inference">inference-heavy</option>
-                  <option value="eco">eco mode</option>
-                </select>
-              </label>
-              <label>
-                CPU Multiplier
-                <input id="resource-cpu-multiplier" type="range" min="0.5" max="2" step="0.1" value="1" />
-              </label>
-              <label>
-                Memory Multiplier
-                <input id="resource-mem-multiplier" type="range" min="0.5" max="2" step="0.1" value="1" />
-              </label>
-              <label>
-                Critical Reservation %
-                <input id="resource-reservation" type="number" min="30" max="90" value="50" />
-              </label>
+              <label>Profile<select id="resource-profile"><option value="balanced">balanced</option><option value="training">training-heavy</option><option value="inference">inference-heavy</option><option value="eco">eco mode</option></select></label>
+              <label>CPU Multiplier<input id="resource-cpu-multiplier" type="range" min="0.5" max="2" step="0.1" value="1" /></label>
+              <label>Memory Multiplier<input id="resource-mem-multiplier" type="range" min="0.5" max="2" step="0.1" value="1" /></label>
+              <label>Critical Reservation %<input id="resource-reservation" type="number" min="30" max="90" value="50" /></label>
             </div>
-            <div class="inline-actions">
-              <button id="generate-resource-plan" class="btn btn-accent" type="button">Generate Override</button>
-              <button id="copy-resource-plan" class="btn" type="button">Copy Override</button>
-            </div>
+            <div class="inline-actions"><button id="generate-resource-plan" class="btn btn-accent" type="button">Generate Override</button><button id="copy-resource-plan" class="btn" type="button">Copy Override</button></div>
             <pre id="resource-override" class="code-box"></pre>
           </article>
 
           <article class="panel">
-            <div class="panel-title-row">
-              <h2>Container and Process Consumption</h2>
-              <span class="tag">Deep Monitor</span>
-            </div>
+            <div class="panel-title-row"><h2>Container and Process Consumption</h2><span class="tag">Deep Monitor</span></div>
             <div class="usage-grid">
-              <div class="table-shell usage-card">
-                <h3>Containers</h3>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Container</th>
-                      <th>CPU %</th>
-                      <th>Memory MB</th>
-                      <th>Net RX KB/s</th>
-                    </tr>
-                  </thead>
-                  <tbody id="container-usage-body"></tbody>
-                </table>
-              </div>
-              <div class="table-shell usage-card">
-                <h3>Processes</h3>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Process</th>
-                      <th>CPU %</th>
-                      <th>Memory MB</th>
-                      <th>Threads</th>
-                    </tr>
-                  </thead>
-                  <tbody id="process-usage-body"></tbody>
-                </table>
-              </div>
+              <div class="table-shell usage-card"><h3>Containers</h3><table><thead><tr><th>Container</th><th>CPU %</th><th>Memory MB</th><th>Net RX KB/s</th></tr></thead><tbody id="container-usage-body"></tbody></table></div>
+              <div class="table-shell usage-card"><h3>Processes</h3><table><thead><tr><th>Process</th><th>CPU %</th><th>Memory MB</th><th>Threads</th></tr></thead><tbody id="process-usage-body"></tbody></table></div>
             </div>
             <p id="usage-updated-at" class="hint">Awaiting resource metrics...</p>
-          </article>
-        </section>
-
-        <section class="tab-pane tab-pane-grid" id="tab-operations">
-          <article class="panel">
-            <div class="panel-title-row">
-              <h2>Process Control</h2>
-              <span class="tag">Command Center</span>
-            </div>
-            <div class="quick-actions">
-              <button class="btn action-btn" data-command="uav-vit train --config configs/experiments/yolos_tiny.yaml">
-                Build training command
-              </button>
-              <button class="btn action-btn" data-command="uav-vit evaluate --config configs/experiments/yolos_tiny.yaml --split test">
-                Build evaluation command
-              </button>
-              <button class="btn action-btn" data-command="bash scripts/k8s_apply.sh">
-                Build deployment command
-              </button>
-            </div>
-            <pre id="command-preview" class="code-box">Select an action to generate a command.</pre>
-          </article>
-
-          <article class="panel">
-            <div class="panel-title-row">
-              <h2>Service Gateway</h2>
-              <span class="tag">Access</span>
-            </div>
-            <div class="link-grid">
-              <a href="/api/grafana/" target="_blank" rel="noreferrer">Open Grafana</a>
-              <a href="/api/prometheus/" target="_blank" rel="noreferrer">Open Prometheus</a>
-              <a href="/api/mlflow/" target="_blank" rel="noreferrer">Open MLflow</a>
-              <a href="/api/alertmanager/" target="_blank" rel="noreferrer">Open Alertmanager</a>
-              <a href="/api/minio/" target="_blank" rel="noreferrer">Open MinIO API</a>
-              <a href="/api/minio-console/" target="_blank" rel="noreferrer">Open MinIO Console</a>
-              <a href="/api/pushgateway/" target="_blank" rel="noreferrer">Open Pushgateway</a>
-              <a href="/api/blackbox-exporter/" target="_blank" rel="noreferrer">Open Blackbox</a>
-              <a href="/api/cadvisor/" target="_blank" rel="noreferrer">Open cAdvisor</a>
-              <a href="/api/node-exporter/" target="_blank" rel="noreferrer">Open Node Exporter</a>
-              <a href="/api/process-exporter/" target="_blank" rel="noreferrer">Open Process Exporter</a>
-              <a href="/api/postgres-exporter/" target="_blank" rel="noreferrer">Open Postgres Exporter</a>
-              <a href="/api/torchserve/" target="_blank" rel="noreferrer">Open TorchServe Inference</a>
-              <a href="/api/torchserve-mgmt/" target="_blank" rel="noreferrer">Open TorchServe Mgmt</a>
-              <a href="/api/torchserve-metrics/" target="_blank" rel="noreferrer">Open TorchServe Metrics</a>
-            </div>
           </article>
         </section>
       </section>
     </main>
 
-    <footer class="footer">
-      <p>UI mode does not start training or inference automatically. Use profiles when needed.</p>
-    </footer>
+    <footer class="footer"><p>Mission control keeps datasets, experiments, observability and serving in one operator surface.</p></footer>
 
     <script src="app.js"></script>
   </body>

@@ -12,9 +12,16 @@ from torch.utils.data import DataLoader
 from uav_vit.data import CocoDetectionDataset, collate_fn
 from uav_vit.engine.evaluator import benchmark_latency, evaluate_model
 from uav_vit.engine.trainer import _select_device, load_checkpoint
-from uav_vit.integrations import log_artifact_if_exists, log_metrics, mlflow_run
-from uav_vit.monitoring import PrometheusPusher, build_push_config
+from uav_vit.integrations import (
+    close_tensorboard_writer,
+    log_artifact_if_exists,
+    log_metrics,
+    log_tensorboard_metrics,
+    mlflow_run,
+    tensorboard_writer,
+)
 from uav_vit.models import build_model
+from uav_vit.monitoring import PrometheusPusher, build_push_config
 
 
 def _maybe_import_custom_modules(config: dict[str, Any]) -> None:
@@ -65,27 +72,35 @@ def evaluate_from_config(
         experiment=str(config["experiment"]["name"]),
         model=str(config["model"]["name"]),
     )
-    with mlflow_run(config, phase=f"evaluate-{split}") as mlflow:
-        metrics = evaluate_model(
-            model=model,
-            image_processor=image_processor,
-            dataloader=dataloader,
-            device=device,
-            score_threshold=float(config["eval"]["score_threshold"]),
-        )
-        latency = benchmark_latency(
-            model=model,
-            dataloader=dataloader,
-            device=device,
-            warmup_iters=int(config["eval"]["latency_warmup_iters"]),
-            latency_iters=int(config["eval"]["latency_iters"]),
-        )
-        output = {**metrics, **latency}
+    tb_writer = tensorboard_writer(config, phase=f"evaluate-{split}")
+    try:
+        with mlflow_run(config, phase=f"evaluate-{split}") as mlflow:
+            metrics = evaluate_model(
+                model=model,
+                image_processor=image_processor,
+                dataloader=dataloader,
+                device=device,
+                score_threshold=float(config["eval"]["score_threshold"]),
+            )
+            latency = benchmark_latency(
+                model=model,
+                dataloader=dataloader,
+                device=device,
+                warmup_iters=int(config["eval"]["latency_warmup_iters"]),
+                latency_iters=int(config["eval"]["latency_iters"]),
+            )
+            output = {**metrics, **latency}
 
-        out_file = output_dir / f"{split}_metrics.json"
-        with out_file.open("w", encoding="utf-8") as file:
-            json.dump(output, file, ensure_ascii=False, indent=2)
-        monitoring_pusher.push_evaluation(split=split, metrics={k: float(v) for k, v in output.items()})
-        log_metrics(mlflow, {f"{split}_{k}": float(v) for k, v in output.items()})
-        log_artifact_if_exists(mlflow, out_file, artifact_path="evaluation")
+            out_file = output_dir / f"{split}_metrics.json"
+            with out_file.open("w", encoding="utf-8") as file:
+                json.dump(output, file, ensure_ascii=False, indent=2)
+            monitoring_pusher.push_evaluation(
+                split=split, metrics={k: float(v) for k, v in output.items()}
+            )
+            metric_payload = {f"{split}_{k}": float(v) for k, v in output.items()}
+            log_metrics(mlflow, metric_payload)
+            log_tensorboard_metrics(tb_writer, metric_payload, step=1)
+            log_artifact_if_exists(mlflow, out_file, artifact_path="evaluation")
+    finally:
+        close_tensorboard_writer(tb_writer)
     return output

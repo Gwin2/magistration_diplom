@@ -13,11 +13,17 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     train_parser = subparsers.add_parser("train", help="Train a detection model")
-    train_parser.add_argument("--config", type=str, required=True, help="Path to experiment YAML config")
+    train_parser.add_argument(
+        "--config", type=str, required=True, help="Path to experiment YAML config"
+    )
 
     eval_parser = subparsers.add_parser("evaluate", help="Evaluate model on val/test split")
-    eval_parser.add_argument("--config", type=str, required=True, help="Path to experiment YAML config")
-    eval_parser.add_argument("--checkpoint", type=str, default=None, help="Optional checkpoint path")
+    eval_parser.add_argument(
+        "--config", type=str, required=True, help="Path to experiment YAML config"
+    )
+    eval_parser.add_argument(
+        "--checkpoint", type=str, default=None, help="Optional checkpoint path"
+    )
     eval_parser.add_argument(
         "--split",
         type=str,
@@ -26,7 +32,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="Dataset split for evaluation",
     )
 
-    convert_parser = subparsers.add_parser("convert-video", help="Convert annotated videos to COCO format")
+    convert_parser = subparsers.add_parser(
+        "convert-video", help="Convert annotated videos to COCO format"
+    )
     convert_parser.add_argument("--video-dir", type=str, required=True)
     convert_parser.add_argument("--annotations-csv", type=str, required=True)
     convert_parser.add_argument("--output-dir", type=str, required=True)

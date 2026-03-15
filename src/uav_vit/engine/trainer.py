@@ -13,9 +13,16 @@ from tqdm import tqdm
 
 from uav_vit.data import CocoDetectionDataset, collate_fn
 from uav_vit.engine.evaluator import benchmark_latency, evaluate_model
-from uav_vit.integrations import log_artifact_if_exists, log_metrics, mlflow_run
-from uav_vit.monitoring import PrometheusPusher, build_push_config
+from uav_vit.integrations import (
+    close_tensorboard_writer,
+    log_artifact_if_exists,
+    log_metrics,
+    log_tensorboard_metrics,
+    mlflow_run,
+    tensorboard_writer,
+)
 from uav_vit.models import build_model
+from uav_vit.monitoring import PrometheusPusher, build_push_config
 from uav_vit.utils.seed import set_seed
 
 
@@ -57,7 +64,9 @@ def _create_dataloader(
     )
 
 
-def load_checkpoint(model: torch.nn.Module, checkpoint_path: str | Path, device: torch.device) -> dict[str, Any]:
+def load_checkpoint(
+    model: torch.nn.Module, checkpoint_path: str | Path, device: torch.device
+) -> dict[str, Any]:
     payload = torch.load(checkpoint_path, map_location=device)
     state_dict = payload.get("model_state_dict", payload)
     missing, unexpected = model.load_state_dict(state_dict, strict=False)
@@ -149,72 +158,77 @@ def train_from_config(config: dict[str, Any]) -> dict[str, Any]:
         writer.writeheader()
 
     summary: dict[str, Any] = {}
-    with mlflow_run(config, phase="train") as mlflow:
-        for epoch in range(1, epochs + 1):
-            model.train()
-            running_loss = 0.0
-            num_steps = 0
-            progress = tqdm(train_loader, desc=f"Epoch {epoch}/{epochs}", leave=False)
-            for step, batch in enumerate(progress, start=1):
-                pixel_values = batch["pixel_values"].to(device)
-                pixel_mask = batch.get("pixel_mask")
-                if pixel_mask is not None:
-                    pixel_mask = pixel_mask.to(device)
-                labels = _to_device_labels(batch["labels"], device)
+    tb_writer = tensorboard_writer(config, phase="train")
+    try:
+        with mlflow_run(config, phase="train") as mlflow:
+            for epoch in range(1, epochs + 1):
+                model.train()
+                running_loss = 0.0
+                num_steps = 0
+                progress = tqdm(train_loader, desc=f"Epoch {epoch}/{epochs}", leave=False)
+                for step, batch in enumerate(progress, start=1):
+                    pixel_values = batch["pixel_values"].to(device)
+                    pixel_mask = batch.get("pixel_mask")
+                    if pixel_mask is not None:
+                        pixel_mask = pixel_mask.to(device)
+                    labels = _to_device_labels(batch["labels"], device)
 
-                optimizer.zero_grad(set_to_none=True)
-                with torch.cuda.amp.autocast(enabled=use_amp):
-                    outputs = model(pixel_values=pixel_values, pixel_mask=pixel_mask, labels=labels)
-                    loss = outputs.loss
+                    optimizer.zero_grad(set_to_none=True)
+                    with torch.cuda.amp.autocast(enabled=use_amp):
+                        outputs = model(
+                            pixel_values=pixel_values, pixel_mask=pixel_mask, labels=labels
+                        )
+                        loss = outputs.loss
 
-                scaler.scale(loss).backward()
-                if grad_clip_norm > 0:
-                    scaler.unscale_(optimizer)
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=grad_clip_norm)
-                scaler.step(optimizer)
-                scaler.update()
+                    scaler.scale(loss).backward()
+                    if grad_clip_norm > 0:
+                        scaler.unscale_(optimizer)
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=grad_clip_norm)
+                    scaler.step(optimizer)
+                    scaler.update()
 
-                running_loss += float(loss.item())
-                num_steps += 1
-                progress.set_postfix({"loss": f"{loss.item():.4f}"})
+                    running_loss += float(loss.item())
+                    num_steps += 1
+                    progress.set_postfix({"loss": f"{loss.item():.4f}"})
 
-                if step % int(config["train"].get("log_interval", 20)) == 0:
-                    print(f"[train] epoch={epoch} step={step} loss={loss.item():.4f}")
+                    if step % int(config["train"].get("log_interval", 20)) == 0:
+                        print(f"[train] epoch={epoch} step={step} loss={loss.item():.4f}")
 
-            train_loss = running_loss / max(num_steps, 1)
-            val_metrics = evaluate_model(
-                model=model,
-                image_processor=image_processor,
-                dataloader=val_loader,
-                device=device,
-                score_threshold=float(config["eval"]["score_threshold"]),
-            )
-            latency_metrics = benchmark_latency(
-                model=model,
-                dataloader=val_loader,
-                device=device,
-                warmup_iters=int(config["eval"]["latency_warmup_iters"]),
-                latency_iters=int(config["eval"]["latency_iters"]),
-            )
+                train_loss = running_loss / max(num_steps, 1)
+                val_metrics = evaluate_model(
+                    model=model,
+                    image_processor=image_processor,
+                    dataloader=val_loader,
+                    device=device,
+                    score_threshold=float(config["eval"]["score_threshold"]),
+                )
+                latency_metrics = benchmark_latency(
+                    model=model,
+                    dataloader=val_loader,
+                    device=device,
+                    warmup_iters=int(config["eval"]["latency_warmup_iters"]),
+                    latency_iters=int(config["eval"]["latency_iters"]),
+                )
 
-            row = {
-                "epoch": epoch,
-                "train_loss": train_loss,
-                "map": val_metrics.get("map", 0.0),
-                "map_50": val_metrics.get("map_50", 0.0),
-                "map_75": val_metrics.get("map_75", 0.0),
-                "mar_100": val_metrics.get("mar_100", 0.0),
-                "latency_ms": latency_metrics["latency_ms"],
-                "fps": latency_metrics["fps"],
-            }
+                row = {
+                    "epoch": epoch,
+                    "train_loss": train_loss,
+                    "map": val_metrics.get("map", 0.0),
+                    "map_50": val_metrics.get("map_50", 0.0),
+                    "map_75": val_metrics.get("map_75", 0.0),
+                    "mar_100": val_metrics.get("mar_100", 0.0),
+                    "latency_ms": latency_metrics["latency_ms"],
+                    "fps": latency_metrics["fps"],
+                }
 
-            with metrics_file.open("a", newline="", encoding="utf-8") as file:
-                writer = csv.DictWriter(file, fieldnames=headers)
-                writer.writerow(row)
-            monitoring_pusher.push_train_epoch(epoch=epoch, metrics={k: float(v) for k, v in row.items() if k != "epoch"})
-            log_metrics(
-                mlflow,
-                {
+                with metrics_file.open("a", newline="", encoding="utf-8") as file:
+                    writer = csv.DictWriter(file, fieldnames=headers)
+                    writer.writerow(row)
+                monitoring_pusher.push_train_epoch(
+                    epoch=epoch,
+                    metrics={k: float(v) for k, v in row.items() if k != "epoch"},
+                )
+                metric_payload = {
                     "train_loss": float(train_loss),
                     "val_map": float(row["map"]),
                     "val_map_50": float(row["map_50"]),
@@ -222,51 +236,58 @@ def train_from_config(config: dict[str, Any]) -> dict[str, Any]:
                     "val_mar_100": float(row["mar_100"]),
                     "latency_ms": float(row["latency_ms"]),
                     "fps": float(row["fps"]),
-                },
-                step=epoch,
-            )
+                }
+                log_metrics(mlflow, metric_payload, step=epoch)
+                log_tensorboard_metrics(tb_writer, metric_payload, step=epoch)
 
-            last_checkpoint = output_dir / "last.pt"
-            payload = {
-                "epoch": epoch,
-                "model_state_dict": model.state_dict(),
-                "optimizer_state_dict": optimizer.state_dict(),
-                "metrics": row,
-                "config": config,
+                last_checkpoint = output_dir / "last.pt"
+                payload = {
+                    "epoch": epoch,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "metrics": row,
+                    "config": config,
+                }
+                torch.save(payload, last_checkpoint)
+
+                current_metric = float(row.get(checkpoint_metric, 0.0))
+                is_better = (
+                    current_metric > best_metric if maximize else current_metric < best_metric
+                )
+                if is_better:
+                    best_metric = current_metric
+                    torch.save(payload, output_dir / "best.pt")
+
+                print(
+                    f"[val] epoch={epoch} map={row['map']:.4f} map50={row['map_50']:.4f} "
+                    f"latency_ms={row['latency_ms']:.2f} fps={row['fps']:.2f}"
+                )
+            summary = {
+                "best_metric_name": checkpoint_metric,
+                "best_metric_value": best_metric,
+                "output_dir": str(output_dir),
             }
-            torch.save(payload, last_checkpoint)
+            with (output_dir / "summary.json").open("w", encoding="utf-8") as file:
+                json.dump(summary, file, ensure_ascii=False, indent=2)
 
-            current_metric = float(row.get(checkpoint_metric, 0.0))
-            is_better = current_metric > best_metric if maximize else current_metric < best_metric
-            if is_better:
-                best_metric = current_metric
-                torch.save(payload, output_dir / "best.pt")
-
-            print(
-                f"[val] epoch={epoch} map={row['map']:.4f} map50={row['map_50']:.4f} "
-                f"latency_ms={row['latency_ms']:.2f} fps={row['fps']:.2f}"
+            log_metrics(
+                mlflow,
+                {
+                    "best_metric_value": float(best_metric),
+                },
             )
-        summary = {
-            "best_metric_name": checkpoint_metric,
-            "best_metric_value": best_metric,
-            "output_dir": str(output_dir),
-        }
-        with (output_dir / "summary.json").open("w", encoding="utf-8") as file:
-            json.dump(summary, file, ensure_ascii=False, indent=2)
-
-        log_metrics(
-            mlflow,
-            {
-                "best_metric_value": float(best_metric),
-            },
-        )
-        monitoring_pusher.push_train_summary(
-            best_metric_name=checkpoint_metric,
-            best_metric_value=float(best_metric),
-        )
-        log_artifact_if_exists(mlflow, metrics_file, artifact_path="training")
-        log_artifact_if_exists(mlflow, output_dir / "summary.json", artifact_path="training")
-        if bool(config.get("mlflow", {}).get("log_checkpoints", True)):
-            log_artifact_if_exists(mlflow, output_dir / "best.pt", artifact_path="checkpoints")
-            log_artifact_if_exists(mlflow, output_dir / "last.pt", artifact_path="checkpoints")
+            log_tensorboard_metrics(
+                tb_writer, {"best_metric_value": float(best_metric)}, step=epochs
+            )
+            monitoring_pusher.push_train_summary(
+                best_metric_name=checkpoint_metric,
+                best_metric_value=float(best_metric),
+            )
+            log_artifact_if_exists(mlflow, metrics_file, artifact_path="training")
+            log_artifact_if_exists(mlflow, output_dir / "summary.json", artifact_path="training")
+            if bool(config.get("mlflow", {}).get("log_checkpoints", True)):
+                log_artifact_if_exists(mlflow, output_dir / "best.pt", artifact_path="checkpoints")
+                log_artifact_if_exists(mlflow, output_dir / "last.pt", artifact_path="checkpoints")
+    finally:
+        close_tensorboard_writer(tb_writer)
     return summary

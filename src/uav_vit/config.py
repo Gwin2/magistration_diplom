@@ -31,7 +31,9 @@ def _normalize_model_config(model_cfg: dict[str, Any]) -> dict[str, Any]:
     if "id2label" in model_cfg:
         model_cfg["id2label"] = {int(key): value for key, value in model_cfg["id2label"].items()}
     if "label2id" in model_cfg:
-        model_cfg["label2id"] = {str(key): int(value) for key, value in model_cfg["label2id"].items()}
+        model_cfg["label2id"] = {
+            str(key): int(value) for key, value in model_cfg["label2id"].items()
+        }
     if "label2id" not in model_cfg and "id2label" in model_cfg:
         model_cfg["label2id"] = {value: key for key, value in model_cfg["id2label"].items()}
     if "id2label" not in model_cfg and "label2id" in model_cfg:

@@ -59,7 +59,9 @@ class UAVObjectDetectionHandler(BaseHandler):
         self.score_threshold = float(os.environ.get("TS_SCORE_THRESHOLD", "0.2"))
         self.initialized = True
 
-    def preprocess(self, data: list[dict[str, Any]]) -> tuple[dict[str, torch.Tensor], list[tuple[int, int]]]:
+    def preprocess(
+        self, data: list[dict[str, Any]]
+    ) -> tuple[dict[str, torch.Tensor], list[tuple[int, int]]]:
         images: list[Image.Image] = []
         sizes: list[tuple[int, int]] = []
         for row in data:
@@ -79,7 +81,9 @@ class UAVObjectDetectionHandler(BaseHandler):
             batch["pixel_mask"] = encoded["pixel_mask"].to(self.device)
         return batch, sizes
 
-    def inference(self, data: tuple[dict[str, torch.Tensor], list[tuple[int, int]]], *args: Any, **kwargs: Any) -> Any:
+    def inference(
+        self, data: tuple[dict[str, torch.Tensor], list[tuple[int, int]]], *args: Any, **kwargs: Any
+    ) -> Any:
         inputs, sizes = data
         with torch.no_grad():
             outputs = self.model(**inputs)

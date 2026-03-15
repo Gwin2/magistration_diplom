@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 ModelBuilder = Callable[[dict[str, Any]], "ModelBundle"]
 MODEL_REGISTRY: dict[str, ModelBuilder] = {}

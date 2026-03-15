@@ -326,11 +326,38 @@ services:
     mem_reservation: 384m
     pids_limit: 512
 
+  control-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: uav-control-api
+    restart: unless-stopped
+    depends_on:
+      - mlflow
+    environment:
+      UAV_CONTROL_WORKSPACE: /app
+      UAV_CONTROL_STATE_DIR: /app/workspace_state
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_EXPERIMENT_NAME: ${MLFLOW_EXPERIMENT_NAME:-uav-vit-thesis}
+      TORCHSERVE_MANAGEMENT_URL: http://torchserve:8081
+      TORCHSERVE_INFERENCE_URL: http://torchserve:8080
+    command: ["uav-vit-control"]
+    ports:
+      - "${CONTROL_API_HOST_PORT:-18070}:8010"
+    volumes:
+      - ./:/app
+    logging: *default-logging
+    cpus: "1.00"
+    mem_limit: 1g
+    mem_reservation: 512m
+    pids_limit: 512
+
   ui:
     image: nginx:1.27-alpine
     container_name: uav-ui
     restart: unless-stopped
     depends_on:
+      - control-api
       - grafana
       - prometheus
       - mlflow

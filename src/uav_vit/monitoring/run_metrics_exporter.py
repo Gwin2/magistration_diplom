@@ -54,17 +54,35 @@ def parse_runs(runs_dir: Path) -> list[RunRow]:
 
 def _create_gauges(gauge_cls: Any) -> dict[str, Any]:
     return {
-        "train_loss": gauge_cls("uav_run_train_loss_last", "Latest training loss from run metrics.csv", ["run_name"]),
-        "map": gauge_cls("uav_run_map_last", "Latest validation mAP from run metrics.csv", ["run_name"]),
-        "map50": gauge_cls("uav_run_map_50_last", "Latest validation mAP@50 from run metrics.csv", ["run_name"]),
-        "map75": gauge_cls("uav_run_map_75_last", "Latest validation mAP@75 from run metrics.csv", ["run_name"]),
-        "mar100": gauge_cls("uav_run_mar_100_last", "Latest validation mAR@100 from run metrics.csv", ["run_name"]),
+        "train_loss": gauge_cls(
+            "uav_run_train_loss_last", "Latest training loss from run metrics.csv", ["run_name"]
+        ),
+        "map": gauge_cls(
+            "uav_run_map_last", "Latest validation mAP from run metrics.csv", ["run_name"]
+        ),
+        "map50": gauge_cls(
+            "uav_run_map_50_last", "Latest validation mAP@50 from run metrics.csv", ["run_name"]
+        ),
+        "map75": gauge_cls(
+            "uav_run_map_75_last", "Latest validation mAP@75 from run metrics.csv", ["run_name"]
+        ),
+        "mar100": gauge_cls(
+            "uav_run_mar_100_last", "Latest validation mAR@100 from run metrics.csv", ["run_name"]
+        ),
         "fps": gauge_cls("uav_run_fps_last", "Latest FPS from run metrics.csv", ["run_name"]),
-        "latency": gauge_cls("uav_run_latency_ms_last", "Latest latency in ms from run metrics.csv", ["run_name"]),
+        "latency": gauge_cls(
+            "uav_run_latency_ms_last", "Latest latency in ms from run metrics.csv", ["run_name"]
+        ),
         "epoch": gauge_cls("uav_run_epoch_last", "Latest epoch from run metrics.csv", ["run_name"]),
-        "best_map50": gauge_cls("uav_run_map_50_best", "Best validation mAP@50 from run metrics.csv", ["run_name"]),
-        "last_scrape_ts": gauge_cls("uav_run_exporter_last_scrape_timestamp", "Last scrape unix timestamp"),
-        "run_count": gauge_cls("uav_run_exporter_runs_total", "Number of runs discovered in runs directory"),
+        "best_map50": gauge_cls(
+            "uav_run_map_50_best", "Best validation mAP@50 from run metrics.csv", ["run_name"]
+        ),
+        "last_scrape_ts": gauge_cls(
+            "uav_run_exporter_last_scrape_timestamp", "Last scrape unix timestamp"
+        ),
+        "run_count": gauge_cls(
+            "uav_run_exporter_runs_total", "Number of runs discovered in runs directory"
+        ),
     }
 
 

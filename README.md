@@ -1,24 +1,26 @@
-# UAV ViT Thesis Framework
+﻿# UAV ViT Thesis Platform
 
-Фреймворк для магистерской работы по детекции БПЛА в сложных условиях: плохая погода, низкое качество кадра, резкие маневры и малые объекты.
+Платформа для магистерской работы по обнаружению БПЛА в сложных условиях: низкое качество кадра, плохая погода, малые размеры цели, резкие маневры и нестабильный фон.
 
-## Возможности
+## Что внутри
 
-- Единый research pipeline: `video -> COCO -> train/eval -> отчеты`
-- Модели ViT/DETR через `transformers` + реестр для кастомных архитектур
-- Метрики: `mAP`, `mAP50`, `mAP75`, `mAR`, latency/FPS
-- Анализ по условиям: `weather`, `quality`, `maneuver`
-- MLOps-слой: `MLflow + TorchServe + MinIO + Postgres` (`docker compose` и `k8s`)
+- research pipeline: `video -> COCO -> train/eval -> reports`
+- базовые ViT/DETR-модели через `transformers` и реестр для собственных архитектур
+- нативный `Mission Control UI` для датасетов, конфигов, экспериментов, TensorBoard, MLflow и TorchServe
+- MLOps-стек: `MLflow + Postgres + MinIO + Prometheus + Grafana + Alertmanager + TorchServe`
+- локальный запуск через `docker compose` и deployment в `k8s`
 
 ## Структура проекта
 
-- `src/uav_vit` - код пайплайна обучения, оценки, аналитики
-- `configs/experiments` - YAML-конфиги экспериментов
-- `scripts` - скрипты bootstrap, pipeline, MLOps и k8s
-- `docs` - методология, шаблоны результатов, деплой
-- `k8s/base` - базовые манифесты кластера
+- `src/uav_vit` — обучение, оценка, аналитика, control plane и serving-интеграции
+- `configs/experiments` — YAML-конфиги экспериментов
+- `scripts` — bootstrap, export, deployment и cluster scripts
+- `monitoring` — Prometheus, Grafana, Alertmanager, exporters
+- `ui` — фронтенд Mission Control
+- `docs` — методология, развёртывание, MLOps и шаблоны результатов
+- `k8s/base` — базовые Kubernetes manifest'ы
 
-## Быстрый старт (локально)
+## Быстрый старт без Docker
 
 Linux/macOS:
 
@@ -38,7 +40,7 @@ pip install -e ".[dev]"
 pre-commit install
 ```
 
-## Подготовка данных (video -> COCO)
+## Подготовка данных
 
 Ожидаемые поля CSV:
 
@@ -52,7 +54,7 @@ uav-vit convert-video \
   --output-dir data/processed/uav_coco
 ```
 
-## Обучение, оценка, отчеты
+## Обучение, оценка, отчёты
 
 ```bash
 uav-vit train --config configs/experiments/yolos_tiny.yaml
@@ -62,139 +64,115 @@ uav-vit summarize --runs-dir runs --output-dir reports
 
 Артефакты:
 
-- `runs/<experiment>/best.pt`, `runs/<experiment>/metrics.csv`
+- `runs/<experiment>/best.pt`, `runs/<experiment>/metrics.csv`, `runs/<experiment>/tensorboard/`
 - `reports/summary.csv`
 - `reports/summary.tex`
 
-## Анализ по условиям
+## Mission Control UI
 
-```bash
-uav-vit analyze-conditions \
-  --config configs/experiments/yolos_tiny.yaml \
-  --metadata-csv data/processed/uav_coco/frame_metadata.csv \
-  --column weather \
-  --split test
-```
+UI доступен по `http://localhost:${UI_HOST_PORT}` (по умолчанию `18090`) и работает как единая операторская панель.
 
-Для других групп используйте `--column quality` или `--column maneuver`.
+Основные разделы:
 
-## Полный прогон
+- `Overview` — health stack, KPI, рекомендации по лучшим запускам и встроенные Grafana dashboards
+- `Datasets` — загрузка архивов, регистрация готовых каталогов и скачивание dataset bundle
+- `Studio` — редактирование YAML-конфигов, библиотека архитектур, шаблоны для своих моделей и запуск train/eval
+- `Experiments` — список запусков, фильтры, сравнение, теги, рейтинг, заметки, jobs и TensorBoard
+- `Serving` — регистрация моделей в TorchServe, inference probe и единый gateway ко всем web-сервисам
+- `Resources` — генерация resource override, потребление по контейнерам и процессам
 
-Windows:
+Поддерживаются темы интерфейса `Flight`, `Horizon`, `Paper`, `Signal`, переключение плотности UI и отключение анимаций.
 
-```powershell
-.\scripts\run_full_pipeline.ps1 -Config configs/experiments/yolos_tiny.yaml -MetadataCsv data/processed/uav_coco/frame_metadata.csv
-```
+## Compose-стек
 
-Linux/macOS:
-
-```bash
-bash scripts/run_full_pipeline.sh configs/experiments/yolos_tiny.yaml runs reports data/processed/uav_coco/frame_metadata.csv
-```
-
-## Кастомные архитектуры
-
-1. Добавьте модуль, например `src/custom_models/my_detector.py`.
-2. Зарегистрируйте билдер: `@register_model("my_detector")`.
-3. Укажите в YAML:
-   - `model.name: my_detector`
-   - `model.custom_modules: ["custom_models.my_detector"]`
-
-Подробнее: [docs/architecture_extension.md](docs/architecture_extension.md)
-
-## MLOps стек (MLflow + TorchServe + Grafana)
-
-Базовый режим (UI + мониторинг, без запуска обучения/инференса):
+Сначала подготовьте `.env`:
 
 ```bash
 cp .env.example .env
+```
+
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Базовый режим: UI, control plane, tracking, monitoring и storage.
+
+```bash
 docker compose up -d --build
 ```
 
-Полный режим (добавить сервисы обучения и инференса):
+Полный режим с обучением и инференсом:
 
 ```bash
 docker compose --profile training --profile inference up -d --build
 ```
 
-Если нужен только один контур:
+Отдельные контуры:
 
 ```bash
 docker compose --profile training up -d --build
 docker compose --profile inference up -d --build
 ```
 
-Сервисы по умолчанию:
+### Сервисы по умолчанию
 
-- Split UI Control Center: `http://localhost:${UI_HOST_PORT}` (`18090`)
-- MLflow UI: `http://localhost:${MLFLOW_HOST_PORT}` (`15000`)
-- MinIO: `http://localhost:${MINIO_API_HOST_PORT}` (`19000`)
-  console: `http://localhost:${MINIO_CONSOLE_HOST_PORT}` (`19001`)
+- UI: `http://localhost:${UI_HOST_PORT}` (`18090`)
+- Control API: `http://localhost:${CONTROL_API_HOST_PORT}` (`18070`)
+- MLflow: `http://localhost:${MLFLOW_HOST_PORT}` (`15000`)
+- MinIO API: `http://localhost:${MINIO_API_HOST_PORT}` (`19000`)
+- MinIO Console: `http://localhost:${MINIO_CONSOLE_HOST_PORT}` (`19001`)
 - Prometheus: `http://localhost:${PROMETHEUS_HOST_PORT}` (`19090`)
 - Grafana: `http://localhost:${GRAFANA_HOST_PORT}` (`13000`)
 - Pushgateway: `http://localhost:${PUSHGATEWAY_HOST_PORT}` (`19091`)
-- Blackbox Exporter: `http://localhost:${BLACKBOX_HOST_PORT}` (`19116`)
 - Alertmanager: `http://localhost:${ALERTMANAGER_HOST_PORT}` (`19093`)
 - Process Exporter: `http://localhost:${PROCESS_EXPORTER_HOST_PORT}` (`19256`)
+- TorchServe inference: `http://localhost:${TORCHSERVE_INFERENCE_HOST_PORT}` (`18080`)
+- TorchServe management: `http://localhost:${TORCHSERVE_MANAGEMENT_HOST_PORT}` (`18081`)
 
-Все host-порты вынесены в переменные `.env`, поэтому при конфликте достаточно поменять значение без редактирования `docker-compose.yml`.
-После изменения портов выполните `docker compose down` и затем `docker compose up -d --build`.
+Через UI-proxy доступны:
 
-Сервисы `trainer`, `run-metrics-exporter` и `torchserve` вынесены в `profiles` и не стартуют в базовом режиме.
-Это позволяет поднимать UI и мониторинг отдельно от тяжелых ML-компонентов.
+- `/api/control`
+- `/api/mlflow`
+- `/api/grafana`
+- `/api/prometheus`
+- `/api/tensorboard`
+- `/api/alertmanager`
+- `/api/minio`, `/api/minio-console`
+- `/api/torchserve`, `/api/torchserve-mgmt`, `/api/torchserve-metrics`
+- `/api/cadvisor`, `/api/node-exporter`, `/api/process-exporter`, `/api/postgres-exporter`
 
-Для UI доступны разделы:
+## Кастомные архитектуры
 
-- Fine-Tuning Studio (ручная настройка и генерация конфигов)
-- Auto Tuning (автоплан дообучения)
-- CI/CD Pipeline Control
-- Resource Governance (генерация `docker-compose.override.yml` по ресурсным профилям)
-- Container and Process Consumption (live-потребление CPU/RAM/threads/network по каждому контейнеру и процессу)
-- Process Control (команды и переходы в сервисы)
-- Live Metrics + встроенные Grafana dashboards
+1. Создайте модуль, например `src/custom_models/my_detector.py`.
+2. Зарегистрируйте билдер: `@register_model("my_detector")`.
+3. Укажите в YAML:
+   - `model.name: my_detector`
+   - `model.custom_modules: ["custom_models.my_detector"]`
+4. При желании редактируйте и сохраняйте шаблон прямо из `Studio` во фронтенде.
 
-Через UI-шлюз (`http://localhost:${UI_HOST_PORT}`) доступны все HTTP-сервисы стека:
-`/api/grafana`, `/api/prometheus`, `/api/mlflow`, `/api/alertmanager`, `/api/minio`,
-`/api/minio-console`, `/api/pushgateway`, `/api/blackbox-exporter`, `/api/cadvisor`,
-`/api/node-exporter`, `/api/process-exporter`, `/api/postgres-exporter`,
-`/api/torchserve`, `/api/torchserve-mgmt`, `/api/torchserve-metrics`.
+Подробнее: [docs/architecture_extension.md](docs/architecture_extension.md)
 
-В Grafana автоматически провиженятся дашборды:
+## Контроль качества и CI
 
-- `UAV System Overview`
-- `UAV Training and Inference`
-- `UAV Resource Control`
-
-Экспорт и публикация модели:
-
-```bash
-python scripts/export_torchserve.py \
-  --config configs/experiments/yolos_tiny.yaml \
-  --checkpoint runs/yolos_tiny_uav/best.pt \
-  --model-name uav_detector \
-  --export-path model-store \
-  --force
-
-bash scripts/torchserve_register_model.sh uav_detector uav_detector.mar
-bash scripts/torchserve_infer.sh uav_detector /path/to/frame.jpg
-```
-
-Kubernetes:
+Локальные проверки:
 
 ```bash
-bash scripts/k8s_apply.sh
-kubectl -n uav-mlops get pods
+ruff check src tests
+ruff format --check src tests
+pytest
+node --check ui/app.js
+docker compose config
 ```
-
-Полная инструкция: [docs/mlops_cluster_ru.md](docs/mlops_cluster_ru.md)
 
 ## Документация
 
 - [Карта документации](docs/README_ru.md)
-- [Развертывание и git-автоматизация](docs/deployment_ru.md)
+- [Развёртывание и git-автоматизация](docs/deployment_ru.md)
 - [MLOps кластер](docs/mlops_cluster_ru.md)
 - [Grafana Web View](docs/grafana_web_view_ru.md)
-- [Split UI Control Center](docs/ui_control_center_ru.md)
+- [Mission Control UI](docs/ui_control_center_ru.md)
 - [Полный контроль ресурсов](docs/resource_control_ru.md)
 - [Расширение архитектур](docs/architecture_extension.md)
 - [Методология исследования](docs/thesis_methodology_ru.md)

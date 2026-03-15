@@ -52,13 +52,17 @@ def build_push_config(config: dict[str, Any], phase: str) -> PrometheusPushConfi
 
 
 class PrometheusPusher:
-    def __init__(self, push_config: PrometheusPushConfig | None, experiment: str, model: str) -> None:
+    def __init__(
+        self, push_config: PrometheusPushConfig | None, experiment: str, model: str
+    ) -> None:
         self.push_config = push_config
         self.experiment = experiment
         self.model = model
         self.prometheus_client = _import_prometheus_client()
         if self.push_config is not None and self.prometheus_client is None:
-            print("[monitoring] prometheus_client is not installed. Pushgateway export is disabled.")
+            print(
+                "[monitoring] prometheus_client is not installed. Pushgateway export is disabled."
+            )
             self.push_config = None
 
     @property
@@ -75,7 +79,9 @@ class PrometheusPusher:
         self._gauge("uav_train_loss", "Training loss", labels, registry).set(
             float(metrics.get("train_loss", 0.0))
         )
-        self._gauge("uav_val_map", "Validation mAP", labels, registry).set(float(metrics.get("map", 0.0)))
+        self._gauge("uav_val_map", "Validation mAP", labels, registry).set(
+            float(metrics.get("map", 0.0))
+        )
         self._gauge("uav_val_map_50", "Validation mAP@50", labels, registry).set(
             float(metrics.get("map_50", 0.0))
         )
@@ -88,7 +94,9 @@ class PrometheusPusher:
         self._gauge("uav_val_latency_ms", "Validation latency ms", labels, registry).set(
             float(metrics.get("latency_ms", 0.0))
         )
-        self._gauge("uav_val_fps", "Validation FPS", labels, registry).set(float(metrics.get("fps", 0.0)))
+        self._gauge("uav_val_fps", "Validation FPS", labels, registry).set(
+            float(metrics.get("fps", 0.0))
+        )
         self._push(registry)
 
     def push_train_summary(self, best_metric_name: str, best_metric_value: float) -> None:
@@ -106,7 +114,9 @@ class PrometheusPusher:
             return
         registry = self.prometheus_client.CollectorRegistry()
         labels = {"experiment": self.experiment, "model": self.model, "split": split}
-        self._gauge("uav_eval_map", "Evaluation mAP", labels, registry).set(float(metrics.get("map", 0.0)))
+        self._gauge("uav_eval_map", "Evaluation mAP", labels, registry).set(
+            float(metrics.get("map", 0.0))
+        )
         self._gauge("uav_eval_map_50", "Evaluation mAP@50", labels, registry).set(
             float(metrics.get("map_50", 0.0))
         )
@@ -119,7 +129,9 @@ class PrometheusPusher:
         self._gauge("uav_eval_latency_ms", "Evaluation latency ms", labels, registry).set(
             float(metrics.get("latency_ms", 0.0))
         )
-        self._gauge("uav_eval_fps", "Evaluation FPS", labels, registry).set(float(metrics.get("fps", 0.0)))
+        self._gauge("uav_eval_fps", "Evaluation FPS", labels, registry).set(
+            float(metrics.get("fps", 0.0))
+        )
         self._push(registry)
 
     def _gauge(

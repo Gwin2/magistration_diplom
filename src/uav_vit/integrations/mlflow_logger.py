@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 
 def _flatten_dict(data: dict[str, Any], parent_key: str = "") -> dict[str, Any]:
@@ -89,14 +90,18 @@ def mlflow_run(config: dict[str, Any], phase: str) -> Iterator[Any | None]:
 def log_metrics(mlflow: Any | None, metrics: dict[str, float], step: int | None = None) -> None:
     if mlflow is None:
         return
-    prepared = {str(key): float(value) for key, value in metrics.items() if _is_float_compatible(value)}
+    prepared = {
+        str(key): float(value) for key, value in metrics.items() if _is_float_compatible(value)
+    }
     if step is None:
         mlflow.log_metrics(prepared)
     else:
         mlflow.log_metrics(prepared, step=step)
 
 
-def log_artifact_if_exists(mlflow: Any | None, path: str | Path, artifact_path: str | None = None) -> None:
+def log_artifact_if_exists(
+    mlflow: Any | None, path: str | Path, artifact_path: str | None = None
+) -> None:
     if mlflow is None:
         return
     local_path = Path(path)
