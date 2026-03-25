@@ -40,6 +40,8 @@ UI нужен для того, чтобы:
 - библиотека конфигов
 - YAML editor
 - библиотека архитектур
+- конструктор архитектур: выбор base detector, layer catalog, builder для classifier/bbox heads
+- автоподстановка параметров слоёв и рекомендации по dataset profile/goal
 - editor для source code и шаблонов конфигурации
 - запуск train/eval и сохранение текущего YAML в configs
 

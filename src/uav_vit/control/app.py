@@ -11,6 +11,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from uav_vit.control.architecture_constructor import (
+    build_constructor_preview,
+    list_constructor_catalog,
+    recommend_blueprint,
+)
 from uav_vit.control.mlops import MlflowBridge, TensorBoardManager, TorchServeBridge
 from uav_vit.control.state import ControlStateStore, slugify
 from uav_vit.control.workspace import WorkspaceService
@@ -33,6 +38,12 @@ class ArchitectureSavePayload(BaseModel):
     source_code: str = ""
     description: str = ""
     tags: list[str] = Field(default_factory=list)
+    blueprint: dict[str, Any] | None = None
+
+
+class ArchitectureConstructorPayload(BaseModel):
+    blueprint: dict[str, Any] | None = None
+    dataset_id: str | None = None
 
 
 class JobLaunchPayload(BaseModel):
@@ -51,9 +62,7 @@ class ExperimentMetadataPayload(BaseModel):
 class TorchServeRegisterPayload(BaseModel):
     model_config = ConfigDict(populate_by_name=True, protected_namespaces=())
 
-    registered_name: str = Field(
-        validation_alias="model_name", serialization_alias="model_name"
-    )
+    registered_name: str = Field(validation_alias="model_name", serialization_alias="model_name")
     archive_file: str
     initial_workers: int = 1
     synchronous: bool = True
@@ -214,6 +223,24 @@ def create_app() -> FastAPI:
     def list_architectures() -> dict[str, Any]:
         return {"items": workspace.list_architectures()}
 
+    @app.get("/architectures/constructor/catalog")
+    def architecture_constructor_catalog() -> dict[str, Any]:
+        return list_constructor_catalog()
+
+    @app.post("/architectures/constructor/preview")
+    def architecture_constructor_preview(
+        payload: ArchitectureConstructorPayload,
+    ) -> dict[str, Any]:
+        dataset = _dataset_by_id(workspace, payload.dataset_id)
+        return build_constructor_preview(payload.blueprint, dataset=dataset)
+
+    @app.post("/architectures/constructor/recommend")
+    def architecture_constructor_recommend(
+        payload: ArchitectureConstructorPayload,
+    ) -> dict[str, Any]:
+        dataset = _dataset_by_id(workspace, payload.dataset_id)
+        return recommend_blueprint(payload.blueprint, dataset=dataset)
+
     @app.get("/architectures/{architecture_id}")
     def get_architecture(architecture_id: str) -> dict[str, Any]:
         data = workspace.get_architecture(architecture_id)
@@ -231,6 +258,7 @@ def create_app() -> FastAPI:
             source_code=payload.source_code.strip() or None,
             description=payload.description,
             tags=payload.tags,
+            blueprint=payload.blueprint,
         )
         result["config_yaml"] = yaml.safe_dump(
             result.get("config", {}), allow_unicode=False, sort_keys=False
@@ -372,7 +400,7 @@ def create_app() -> FastAPI:
 
     @app.delete("/torchserve/models/{model_name}")
     def unregister_torchserve_model(
-        registered_model_name: Annotated[str, Path(alias="model_name")]
+        registered_model_name: Annotated[str, Path(alias="model_name")],
     ) -> dict[str, Any]:
         try:
             result = torchserve.unregister_model(registered_model_name)
@@ -401,6 +429,15 @@ def create_app() -> FastAPI:
 
 def _parse_tags(raw_tags: str) -> list[str]:
     return sorted({item.strip() for item in raw_tags.split(",") if item and item.strip()})
+
+
+def _dataset_by_id(workspace: WorkspaceService, dataset_id: str | None) -> dict[str, Any] | None:
+    if not dataset_id:
+        return None
+    for dataset in workspace.list_datasets():
+        if dataset["id"] == dataset_id:
+            return dataset
+    return None
 
 
 def _parse_yaml_mapping(text: str) -> dict[str, Any]:

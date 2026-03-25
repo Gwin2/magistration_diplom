@@ -62,6 +62,7 @@ const uiStorageKeys = {
   theme: "uav_ui_theme",
   motion: "uav_ui_motion",
   density: "uav_ui_density",
+  layout: "uav_ui_panel_layouts",
 };
 
 const allowedThemes = new Set(["flight", "horizon", "paper", "signal"]);
@@ -87,6 +88,23 @@ const uiState = {
   selectedJobId: "",
   compareKeys: new Set(),
   serviceStatus: Object.fromEntries(Object.keys(statusChecks).map((service) => [service, null])),
+  constructorCatalog: null,
+  constructorBlueprint: null,
+  constructorPreview: null,
+};
+
+const constructorDragState = {
+  mode: null,
+  layerType: "",
+  sourceHead: "",
+  sourceIndex: -1,
+};
+
+const panelDragState = {
+  panelId: "",
+  sourcePaneId: "",
+  element: null,
+  targetPaneId: "",
 };
 
 const defaultConfigText = `experiment:\n  name: new_experiment\n  seed: 42\n\npaths:\n  train_images: data/processed/uav_coco/images/train\n  val_images: data/processed/uav_coco/images/val\n  test_images: data/processed/uav_coco/images/test\n  train_annotations: data/processed/uav_coco/annotations/instances_train.json\n  val_annotations: data/processed/uav_coco/annotations/instances_val.json\n  test_annotations: data/processed/uav_coco/annotations/instances_test.json\n  output_dir: runs/new_experiment\n\nmlflow:\n  enabled: true\n  tracking_uri: http://mlflow:5000\n  experiment_name: uav-vit-thesis\n  run_name: new_experiment\n  log_checkpoints: true\n\ntensorboard:\n  enabled: true\n\nmodel:\n  name: yolos_tiny\n  checkpoint: hustvl/yolos-tiny\n  num_labels: 1\n  id2label:\n    \"0\": uav\n  label2id:\n    uav: 0\n  train_backbone: true\n  custom_modules: []\n\ntrain:\n  device: auto\n  epochs: 30\n  batch_size: 4\n  learning_rate: 2.0e-5\n  weight_decay: 1.0e-4\n  num_workers: 4\n  grad_clip_norm: 1.0\n  log_interval: 20\n  mixed_precision: true\n  eval_every_epoch: true\n  checkpoint_metric: map\n  checkpoint_mode: max\n\neval:\n  score_threshold: 0.1\n  latency_warmup_iters: 10\n  latency_iters: 50\n\ndata:\n  processor_size: 800\n  normalize_boxes: false\n`;
@@ -94,6 +112,53 @@ const defaultConfigText = `experiment:\n  name: new_experiment\n  seed: 42\n\npa
 const defaultArchitectureConfigText = `experiment:\n  name: custom_detector\n  seed: 42\n\npaths:\n  train_images: data/processed/uav_coco/images/train\n  val_images: data/processed/uav_coco/images/val\n  test_images: data/processed/uav_coco/images/test\n  train_annotations: data/processed/uav_coco/annotations/instances_train.json\n  val_annotations: data/processed/uav_coco/annotations/instances_val.json\n  test_annotations: data/processed/uav_coco/annotations/instances_test.json\n  output_dir: runs/custom_detector\n\nmlflow:\n  enabled: true\n  tracking_uri: http://mlflow:5000\n  experiment_name: uav-vit-thesis\n  run_name: custom_detector\n  log_checkpoints: true\n\ntensorboard:\n  enabled: true\n\nmodel:\n  name: my_detector\n  checkpoint: facebook/detr-resnet-50\n  num_labels: 1\n  id2label:\n    \"0\": uav\n  label2id:\n    uav: 0\n  train_backbone: true\n  custom_modules:\n    - custom_models.my_detector\n\ntrain:\n  device: auto\n  epochs: 30\n  batch_size: 4\n  learning_rate: 2.0e-5\n  weight_decay: 1.0e-4\n  num_workers: 4\n  grad_clip_norm: 1.0\n  log_interval: 20\n  mixed_precision: true\n  eval_every_epoch: true\n  checkpoint_metric: map\n  checkpoint_mode: max\n\neval:\n  score_threshold: 0.1\n  latency_warmup_iters: 10\n  latency_iters: 50\n\ndata:\n  processor_size: 800\n  normalize_boxes: false\n`;
 
 const defaultArchitectureSource = `from __future__ import annotations\n\nfrom transformers import AutoImageProcessor, AutoModelForObjectDetection\n\nfrom uav_vit.models import ModelBundle, register_model\n\n\n@register_model(\"my_detector\")\ndef build_my_detector(config: dict) -> ModelBundle:\n    checkpoint = config[\"model\"].get(\"checkpoint\") or \"facebook/detr-resnet-50\"\n    model = AutoModelForObjectDetection.from_pretrained(\n        checkpoint,\n        ignore_mismatched_sizes=True,\n        num_labels=int(config[\"model\"][\"num_labels\"]),\n        id2label={int(key): value for key, value in config[\"model\"][\"id2label\"].items()},\n        label2id={str(key): int(value) for key, value in config[\"model\"][\"label2id\"].items()},\n    )\n    processor = AutoImageProcessor.from_pretrained(checkpoint)\n    return ModelBundle(model=model, image_processor=processor, name=\"my_detector\")\n`;
+
+const fallbackConstructorCatalog = {
+  base_models: [
+    { id: "detr_resnet50", label: "DETR ResNet-50", checkpoint: "facebook/detr-resnet-50", summary: "Balanced baseline for general UAV detection." },
+    { id: "yolos_tiny", label: "YOLOS Tiny", checkpoint: "hustvl/yolos-tiny", summary: "Compact baseline when latency matters more than capacity." },
+    { id: "hf_auto", label: "HF Auto", checkpoint: "facebook/detr-resnet-50", summary: "Bring your own checkpoint and keep constructor-driven heads." },
+  ],
+  goals: [
+    { id: "balanced", label: "Balanced" },
+    { id: "accuracy", label: "Accuracy" },
+    { id: "latency", label: "Latency" },
+    { id: "stability", label: "Stability" },
+  ],
+  layers: [
+    { type: "linear", label: "Linear", description: "Dense projection on token features.", params: [{ name: "out_features", type: "int", default: 256 }, { name: "bias", type: "bool", default: true }] },
+    { type: "gelu", label: "GELU", description: "Smooth activation for transformer-style heads.", params: [] },
+    { type: "relu", label: "ReLU", description: "Low-cost activation for faster heads.", params: [{ name: "inplace", type: "bool", default: true }] },
+    { type: "dropout", label: "Dropout", description: "Regularization for difficult weather or small datasets.", params: [{ name: "p", type: "float", default: 0.1 }] },
+    { type: "layer_norm", label: "LayerNorm", description: "Stabilizes token features before prediction.", params: [{ name: "eps", type: "float", default: 0.00001 }] },
+    { type: "transformer_encoder", label: "Transformer Encoder", description: "Adds token mixing before the prediction head.", params: [{ name: "nhead", type: "int", default: 8 }, { name: "dim_feedforward", type: "int", default: 1024 }, { name: "dropout", type: "float", default: 0.1 }, { name: "norm_first", type: "bool", default: true }] },
+    { type: "residual_mlp", label: "Residual MLP", description: "Residual feed-forward refinement for dense prediction.", params: [{ name: "expansion", type: "float", default: 2.0 }, { name: "dropout", type: "float", default: 0.1 }, { name: "activation", type: "enum", default: "gelu", options: ["gelu", "relu"] }] },
+    { type: "identity", label: "Identity", description: "No-op layer, useful for temporary staging.", params: [] },
+  ],
+  templates: {
+    default_blueprint: {
+      name: "custom_detector_builder",
+      base_model: "detr_resnet50",
+      checkpoint: "facebook/detr-resnet-50",
+      goal: "balanced",
+      dataset_id: "",
+      labels: ["uav"],
+      train_backbone: true,
+      head_specs: {
+        classifier: [
+          { type: "linear", params: { out_features: 256, bias: true } },
+          { type: "gelu", params: {} },
+          { type: "dropout", params: { p: 0.1 } },
+        ],
+        bbox: [
+          { type: "linear", params: { out_features: 256, bias: true } },
+          { type: "relu", params: { inplace: true } },
+          { type: "dropout", params: { p: 0.05 } },
+        ],
+      },
+    },
+  },
+};
 
 function withTimeout(url, options = {}, timeoutMs = 7000) {
   const controller = new AbortController();
@@ -174,6 +239,47 @@ function debounce(fn, wait = 300) {
     timer = setTimeout(() => fn(...args), wait);
   };
 }
+
+function deepClone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function getConstructorCatalog() {
+  return uiState.constructorCatalog || fallbackConstructorCatalog;
+}
+
+function getConstructorLayerMap() {
+  return new Map((getConstructorCatalog().layers || []).map((layer) => [layer.type, layer]));
+}
+
+function makeDefaultConstructorBlueprint() {
+  return deepClone(getConstructorCatalog().templates?.default_blueprint || fallbackConstructorCatalog.templates.default_blueprint);
+}
+
+function getConstructorHeadLabel(headName) {
+  return headName === "bbox" ? "BBox head" : "Classifier head";
+}
+
+function getConstructorLayerTone(layerType) {
+  if (["gelu", "relu"].includes(layerType)) return "activation";
+  if (["dropout", "layer_norm"].includes(layerType)) return "stability";
+  if (["transformer_encoder", "residual_mlp"].includes(layerType)) return "mixer";
+  if (["identity"].includes(layerType)) return "utility";
+  return "projection";
+}
+
+function createConstructorLayer(layerType) {
+  const schema = getConstructorLayerMap().get(layerType);
+  if (!schema) return null;
+  return {
+    type: layerType,
+    params: Object.fromEntries((schema.params || []).map((param) => [param.name, param.default])),
+  };
+}
+
+uiState.constructorCatalog = fallbackConstructorCatalog;
+uiState.constructorBlueprint = makeDefaultConstructorBlueprint();
+
 async function parseResponseError(response) {
   const text = await response.text();
   const payload = parseMaybeJson(text);
@@ -555,6 +661,228 @@ function setupTabs() {
   activateTab(hashTarget || document.querySelector(".tab-btn.is-active")?.dataset.tabTarget || "tab-overview", false);
 }
 
+function readPanelLayoutState() {
+  return parseMaybeJson(safeReadStorage(uiStorageKeys.layout)) || {};
+}
+
+function writePanelLayoutState(layouts) {
+  safeWriteStorage(uiStorageKeys.layout, JSON.stringify(layouts));
+}
+
+function getPanePanels(pane) {
+  return Array.from(pane?.querySelectorAll(":scope > .panel") || []);
+}
+
+function ensurePanelLayoutId(panel, index = 0) {
+  if (!panel) return "";
+  if (panel.dataset.panelId) return panel.dataset.panelId;
+  const paneId = panel.closest(".tab-pane-grid")?.id || "workspace";
+  const title = panel.querySelector(".panel-title-row h2")?.textContent || panel.querySelector("h2")?.textContent || `panel_${index}`;
+  const panelId = `${paneId}:${slugify(title)}`;
+  panel.dataset.panelId = panelId;
+  return panelId;
+}
+
+function persistPaneLayout(pane) {
+  if (!pane?.id) return;
+  const layouts = readPanelLayoutState();
+  layouts[pane.id] = getPanePanels(pane).map((panel, index) => ensurePanelLayoutId(panel, index));
+  writePanelLayoutState(layouts);
+}
+
+function restorePaneLayout(pane) {
+  if (!pane?.id) return;
+  const layouts = readPanelLayoutState();
+  const savedOrder = Array.isArray(layouts[pane.id]) ? layouts[pane.id] : [];
+  if (!savedOrder.length) return;
+  const panels = getPanePanels(pane);
+  const panelMap = new Map(panels.map((panel, index) => [ensurePanelLayoutId(panel, index), panel]));
+  const ordered = savedOrder.map((panelId) => panelMap.get(panelId)).filter(Boolean);
+  panels.forEach((panel) => {
+    if (!ordered.includes(panel)) ordered.push(panel);
+  });
+  ordered.forEach((panel) => pane.appendChild(panel));
+}
+
+function clearPanelDropIndicators() {
+  document.querySelectorAll(".panel.is-drop-target").forEach((panel) => {
+    panel.classList.remove("is-drop-target");
+    delete panel.dataset.dropPosition;
+  });
+}
+
+function clearPanelDragState() {
+  panelDragState.panelId = "";
+  panelDragState.sourcePaneId = "";
+  panelDragState.targetPaneId = "";
+  panelDragState.element?.classList.remove("is-dragging");
+  panelDragState.element = null;
+  document.body.classList.remove("is-panel-dragging");
+  document.querySelectorAll(".tab-pane-grid.is-drop-zone").forEach((pane) => pane.classList.remove("is-drop-zone"));
+  clearPanelDropIndicators();
+}
+
+function resolveDropPosition(panel, clientX, clientY) {
+  const rect = panel.getBoundingClientRect();
+  const withinVerticalBand = clientY >= rect.top && clientY <= rect.bottom;
+  const withinHorizontalBand = clientX >= rect.left && clientX <= rect.right;
+  const horizontalDistance = Math.abs(clientX - (rect.left + rect.width / 2));
+  const verticalDistance = Math.abs(clientY - (rect.top + rect.height / 2));
+  if (withinVerticalBand && horizontalDistance > verticalDistance) {
+    return clientX < rect.left + rect.width / 2 ? "before" : "after";
+  }
+  if (withinHorizontalBand && verticalDistance >= horizontalDistance) {
+    return clientY < rect.top + rect.height / 2 ? "before" : "after";
+  }
+  return clientY < rect.top + rect.height / 2 ? "before" : "after";
+}
+
+function findNearestPanel(pane, clientX, clientY) {
+  const candidates = getPanePanels(pane).filter((panel) => panel !== panelDragState.element);
+  if (!candidates.length) return null;
+  return candidates.reduce((best, panel) => {
+    const rect = panel.getBoundingClientRect();
+    const dx = clientX - (rect.left + rect.width / 2);
+    const dy = clientY - (rect.top + rect.height / 2);
+    const distance = Math.hypot(dx, dy);
+    if (!best || distance < best.distance) return { panel, distance };
+    return best;
+  }, null)?.panel || null;
+}
+
+function updatePaneDropIndicator(pane, clientX, clientY) {
+  const nearestPanel = findNearestPanel(pane, clientX, clientY);
+  clearPanelDropIndicators();
+  if (!nearestPanel) return null;
+  nearestPanel.dataset.dropPosition = resolveDropPosition(nearestPanel, clientX, clientY);
+  nearestPanel.classList.add("is-drop-target");
+  return nearestPanel;
+}
+
+function commitPanelDrop(targetPane, targetPanel = null) {
+  const sourcePanel = panelDragState.element;
+  if (!sourcePanel || !targetPane) return;
+  if (targetPanel && targetPanel !== sourcePanel) {
+    const position = targetPanel.dataset.dropPosition || "before";
+    targetPane.insertBefore(sourcePanel, position === "after" ? targetPanel.nextSibling : targetPanel);
+  } else {
+    targetPane.appendChild(sourcePanel);
+  }
+  persistPaneLayout(targetPane);
+  if (panelDragState.sourcePaneId && panelDragState.sourcePaneId !== targetPane.id) {
+    const sourcePane = document.getElementById(panelDragState.sourcePaneId);
+    if (sourcePane) persistPaneLayout(sourcePane);
+  }
+  clearPanelDragState();
+}
+
+function decoratePanelTitleRow(panel) {
+  const row = panel.querySelector(".panel-title-row");
+  if (!row || row.dataset.decorated === "true") return;
+  row.dataset.decorated = "true";
+  const children = Array.from(row.children);
+  const heading = children[0] || null;
+  const side = document.createElement("div");
+  side.className = "panel-header-meta";
+  children.slice(1).forEach((child) => side.appendChild(child));
+  const handle = document.createElement("button");
+  handle.type = "button";
+  handle.className = "panel-drag-handle";
+  handle.draggable = true;
+  handle.title = "Drag panel";
+  handle.setAttribute("aria-label", "Drag panel");
+  handle.innerHTML = '<span></span><span></span><span></span>';
+  handle.addEventListener("dragstart", (event) => {
+    const sourcePanel = event.currentTarget.closest(".panel");
+    const sourcePane = sourcePanel?.closest(".tab-pane-grid");
+    if (!sourcePanel || !sourcePane) return;
+    panelDragState.panelId = ensurePanelLayoutId(sourcePanel);
+    panelDragState.sourcePaneId = sourcePane.id;
+    panelDragState.targetPaneId = sourcePane.id;
+    panelDragState.element = sourcePanel;
+    sourcePanel.classList.add("is-dragging");
+    document.body.classList.add("is-panel-dragging");
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", panelDragState.panelId);
+  });
+  handle.addEventListener("dragend", () => clearPanelDragState());
+  side.appendChild(handle);
+  if (heading) {
+    row.replaceChildren(heading, side);
+  } else {
+    row.replaceChildren(side);
+  }
+}
+
+function bindPanelDragEvents(panel) {
+  if (!panel || panel.dataset.dragBound === "true") return;
+  panel.dataset.dragBound = "true";
+  panel.classList.add("layout-panel");
+  panel.addEventListener("dragover", (event) => {
+    if (!panelDragState.element || panel === panelDragState.element) return;
+    event.preventDefault();
+    clearPanelDropIndicators();
+    panel.dataset.dropPosition = resolveDropPosition(panel, event.clientX, event.clientY);
+    panel.classList.add("is-drop-target");
+  });
+  panel.addEventListener("dragleave", (event) => {
+    if (!panel.contains(event.relatedTarget)) {
+      panel.classList.remove("is-drop-target");
+      delete panel.dataset.dropPosition;
+    }
+  });
+  panel.addEventListener("drop", (event) => {
+    if (!panelDragState.element || panel === panelDragState.element) return;
+    event.preventDefault();
+    const targetPane = panel.closest(".tab-pane-grid");
+    if (!targetPane) return;
+    commitPanelDrop(targetPane, panel);
+  });
+}
+
+function setupPanelGridLayout() {
+  const panes = Array.from(document.querySelectorAll(".tab-pane-grid"));
+  panes.forEach((pane) => {
+    getPanePanels(pane).forEach((panel, index) => {
+      panel.dataset.defaultOrder = panel.dataset.defaultOrder || String(index);
+      ensurePanelLayoutId(panel, index);
+      decoratePanelTitleRow(panel);
+      bindPanelDragEvents(panel);
+    });
+    restorePaneLayout(pane);
+    pane.addEventListener("dragover", (event) => {
+      if (!panelDragState.element) return;
+      event.preventDefault();
+      if (!event.target.closest(".panel")) updatePaneDropIndicator(pane, event.clientX, event.clientY);
+      pane.classList.add("is-drop-zone");
+      panelDragState.targetPaneId = pane.id;
+    });
+    pane.addEventListener("dragleave", (event) => {
+      if (!pane.contains(event.relatedTarget)) pane.classList.remove("is-drop-zone");
+    });
+    pane.addEventListener("drop", (event) => {
+      if (!panelDragState.element) return;
+      event.preventDefault();
+      pane.classList.remove("is-drop-zone");
+      const targetPanel = event.target.closest(".panel") || pane.querySelector(".panel.is-drop-target");
+      commitPanelDrop(pane, targetPanel);
+    });
+  });
+  document.getElementById("layout-reset")?.addEventListener("click", () => {
+    try {
+      window.localStorage.removeItem(uiStorageKeys.layout);
+    } catch {
+      // ignore storage errors
+    }
+    panes.forEach((pane) => {
+      getPanePanels(pane)
+        .sort((left, right) => Number(left.dataset.defaultOrder || 0) - Number(right.dataset.defaultOrder || 0))
+        .forEach((panel) => pane.appendChild(panel));
+    });
+    clearPanelDragState();
+  });
+}
+
 function resolveDashboardSrc(rawSrc) {
   try {
     const url = new URL(rawSrc, window.location.origin);
@@ -726,9 +1054,155 @@ function renderArchitectures() {
   document.getElementById("architecture-list").innerHTML = rows.length ? rows.map((item) => `
     <button class="list-item ${item.id === uiState.selectedArchitectureId ? "is-selected" : ""}" type="button" data-architecture-load="${escapeHtml(item.id)}">
       <span>${escapeHtml(item.name)}</span>
-      <small>${escapeHtml(item.kind)}${item.tags?.length ? ` • ${escapeHtml(item.tags.join(", "))}` : ""}</small>
+      <small>${escapeHtml(item.kind)}${item.has_blueprint ? " • builder" : ""}${item.tags?.length ? ` • ${escapeHtml(item.tags.join(", "))}` : ""}</small>
     </button>
   `).join("") : '<div class="empty-state">No architectures match the current filter.</div>';
+}
+
+function populateConstructorDatasetOptions() {
+  const select = document.getElementById("constructor-dataset");
+  if (!select) return;
+  const currentValue = uiState.constructorBlueprint?.dataset_id || "";
+  const options = ['<option value="">Auto / none</option>'].concat(
+    uiState.datasets.map((dataset) => `<option value="${escapeHtml(dataset.id)}">${escapeHtml(dataset.name)} • ${dataset.file_count || 0} files</option>`),
+  );
+  select.innerHTML = options.join("");
+  select.value = uiState.datasets.some((dataset) => dataset.id === currentValue) ? currentValue : "";
+}
+
+function renderConstructorSummary() {
+  const container = document.getElementById("constructor-summary");
+  if (!container) return;
+  const preview = uiState.constructorPreview;
+  if (!preview) {
+    container.innerHTML = '<div class="empty-state">Generate a preview or request a recommendation to see constructor notes.</div>';
+    return;
+  }
+  const cards = [];
+  if (preview.summary) {
+    cards.push(`
+      <article class="recommendation-card">
+        <p class="recommendation-rank">Preview</p>
+        <h4>${escapeHtml(preview.summary.model_slug || uiState.constructorBlueprint?.name || "custom_detector")}</h4>
+        <p>Base: ${escapeHtml(preview.summary.base_model || "--")} • classifier: ${preview.summary.classifier_layers || 0} • bbox: ${preview.summary.bbox_layers || 0}</p>
+        <strong>${preview.summary.train_backbone ? "Backbone trainable" : "Backbone frozen"}</strong>
+      </article>
+    `);
+  }
+  (preview.notes || []).forEach((note, index) => {
+    cards.push(`
+      <article class="recommendation-card">
+        <p class="recommendation-rank">Note ${index + 1}</p>
+        <p>${escapeHtml(note)}</p>
+      </article>
+    `);
+  });
+  container.innerHTML = cards.join("") || '<div class="empty-state">No constructor guidance yet.</div>';
+}
+
+function renderConstructorLayerCatalog() {
+  const container = document.getElementById("constructor-layer-catalog");
+  if (!container) return;
+  const layers = getConstructorCatalog().layers || [];
+  container.innerHTML = layers.map((layer) => `
+    <article class="layer-palette-card layer-tone-${escapeHtml(getConstructorLayerTone(layer.type))}" draggable="true" data-layer-drag-type="${escapeHtml(layer.type)}">
+      <div class="layer-palette-meta">
+        <span class="layer-family">${escapeHtml(getConstructorLayerTone(layer.type))}</span>
+        <span class="layer-drop-note">Drag</span>
+      </div>
+      <div>
+        <h4>${escapeHtml(layer.label)}</h4>
+        <p>${escapeHtml(layer.description || "")}</p>
+      </div>
+      <div class="chip-row layer-param-chips">
+        ${(layer.params || []).length ? layer.params.map((param) => `<span class="chip">${escapeHtml(param.name)}</span>`).join("") : '<span class="chip">auto</span>'}
+      </div>
+      <div class="inline-actions compact-actions">
+        <button class="btn btn-inline" type="button" data-layer-add="${escapeHtml(layer.type)}" data-layer-target="classifier">Add to classifier</button>
+        <button class="btn btn-inline" type="button" data-layer-add="${escapeHtml(layer.type)}" data-layer-target="bbox">Add to bbox</button>
+      </div>
+    </article>
+  `).join("");
+}
+
+function renderConstructorStack(headName) {
+  const container = document.getElementById(`constructor-${headName}-stack`);
+  if (!container) return;
+  const blueprint = uiState.constructorBlueprint || makeDefaultConstructorBlueprint();
+  const layers = blueprint.head_specs?.[headName] || [];
+  const layerMap = getConstructorLayerMap();
+  const cards = layers.map((layer, index) => {
+    const schema = layerMap.get(layer.type) || { label: layer.type, params: [] };
+    const paramsHtml = (schema.params || []).map((param) => {
+      const value = layer.params?.[param.name];
+      if (param.type === "bool") {
+        return `<label class="layer-param"><span>${escapeHtml(param.name)}</span><input type="checkbox" data-layer-param="${escapeHtml(param.name)}" data-head-name="${escapeHtml(headName)}" data-layer-index="${index}" ${value ? "checked" : ""} /></label>`;
+      }
+      if (param.type === "enum") {
+        return `<label class="layer-param"><span>${escapeHtml(param.name)}</span><select data-layer-param="${escapeHtml(param.name)}" data-head-name="${escapeHtml(headName)}" data-layer-index="${index}">${(param.options || []).map((option) => `<option value="${escapeHtml(option)}" ${String(value) === String(option) ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select></label>`;
+      }
+      const inputType = param.type === "int" || param.type === "float" ? "number" : "text";
+      const step = param.type === "int" ? "1" : "any";
+      return `<label class="layer-param"><span>${escapeHtml(param.name)}</span><input type="${inputType}" step="${step}" value="${escapeHtml(value ?? param.default ?? "")}" data-layer-param="${escapeHtml(param.name)}" data-head-name="${escapeHtml(headName)}" data-layer-index="${index}" /></label>`;
+    }).join("");
+    return `
+      <button class="stack-drop-slot" type="button" data-drop-head="${escapeHtml(headName)}" data-drop-index="${index}">
+        <span>Drop into ${escapeHtml(getConstructorHeadLabel(headName))}</span>
+      </button>
+      <article class="layer-card layer-tone-${escapeHtml(getConstructorLayerTone(layer.type))}" draggable="true" data-stack-layer="true" data-head-name="${escapeHtml(headName)}" data-layer-index="${index}">
+        <div class="layer-card-head">
+          <div>
+            <div class="layer-card-meta"><span class="layer-order">#${index + 1}</span><span class="layer-family">${escapeHtml(getConstructorLayerTone(layer.type))}</span></div>
+            <h4>${escapeHtml(schema.label || layer.type)}</h4>
+            <p>${escapeHtml(layer.type)}</p>
+          </div>
+          <div class="inline-actions compact-actions">
+            <span class="drag-handle" aria-hidden="true">::</span>
+            <button class="btn btn-inline" type="button" data-layer-move="up" data-head-name="${escapeHtml(headName)}" data-layer-index="${index}">Up</button>
+            <button class="btn btn-inline" type="button" data-layer-move="down" data-head-name="${escapeHtml(headName)}" data-layer-index="${index}">Down</button>
+            <button class="btn btn-inline" type="button" data-layer-remove="true" data-head-name="${escapeHtml(headName)}" data-layer-index="${index}">Remove</button>
+          </div>
+        </div>
+        <div class="layer-param-grid">${paramsHtml || '<div class="empty-state">No parameters for this layer.</div>'}</div>
+      </article>
+    `;
+  }).join("");
+
+  container.innerHTML = `
+    <div class="builder-lane-copy">
+      <strong>${escapeHtml(getConstructorHeadLabel(headName))}</strong>
+      <span>${layers.length ? `${layers.length} block${layers.length === 1 ? "" : "s"} in this lane` : "Drop your first block here"}</span>
+    </div>
+    ${!layers.length ? `<div class="empty-state builder-empty">This lane is empty. Drag a tile here or tap “Add to ${escapeHtml(headName)}”.</div>` : ""}
+    ${cards}
+    <button class="stack-drop-slot stack-drop-slot-end" type="button" data-drop-head="${escapeHtml(headName)}" data-drop-index="${layers.length}">
+      <span>Add to the end of ${escapeHtml(getConstructorHeadLabel(headName))}</span>
+    </button>
+  `;
+}
+
+function renderConstructorBuilder() {
+  const blueprint = uiState.constructorBlueprint || makeDefaultConstructorBlueprint();
+  document.getElementById("constructor-name").value = blueprint.name || "";
+  document.getElementById("constructor-checkpoint").value = blueprint.checkpoint || "";
+  document.getElementById("constructor-labels").value = (blueprint.labels || []).join(", ");
+
+  const baseModelSelect = document.getElementById("constructor-base-model");
+  const goalSelect = document.getElementById("constructor-goal");
+  if (baseModelSelect) {
+    baseModelSelect.innerHTML = (getConstructorCatalog().base_models || []).map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)}</option>`).join("");
+    baseModelSelect.value = blueprint.base_model || "";
+  }
+  if (goalSelect) {
+    goalSelect.innerHTML = (getConstructorCatalog().goals || []).map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)}</option>`).join("");
+    goalSelect.value = blueprint.goal || "balanced";
+  }
+
+  populateConstructorDatasetOptions();
+  renderConstructorLayerCatalog();
+  renderConstructorStack("classifier");
+  renderConstructorStack("bbox");
+  renderConstructorSummary();
 }
 
 function renderExperiments() {
@@ -814,6 +1288,7 @@ function resetArchitectureEditor() {
   document.getElementById("architecture-config").value = defaultArchitectureConfigText;
   document.getElementById("architecture-source").value = defaultArchitectureSource;
   document.getElementById("architecture-active-badge").textContent = "New model";
+  resetConstructorBuilder();
   renderArchitectures();
 }
 
@@ -838,6 +1313,7 @@ async function loadCatalog() {
   renderDatasets();
   renderConfigs();
   renderArchitectures();
+  renderConstructorBuilder();
   renderExperiments();
   renderCompareTable();
   populateExperimentMetadata();
@@ -848,6 +1324,7 @@ async function loadCatalog() {
 async function loadDatasets() {
   uiState.datasets = (await apiRequest("/api/control/datasets")).items || [];
   renderDatasets();
+  populateConstructorDatasetOptions();
   renderSummary();
 }
 
@@ -881,7 +1358,187 @@ async function loadArchitectureDetail(id) {
   document.getElementById("architecture-config").value = payload.config_yaml || defaultArchitectureConfigText;
   document.getElementById("architecture-source").value = payload.source_code || defaultArchitectureSource;
   document.getElementById("architecture-active-badge").textContent = payload.name || payload.id;
+  if (payload.blueprint) {
+    uiState.constructorBlueprint = deepClone(payload.blueprint);
+  } else {
+    uiState.constructorBlueprint = makeDefaultConstructorBlueprint();
+    uiState.constructorBlueprint.name = payload.name || payload.id || "custom_detector_builder";
+  }
+  renderConstructorBuilder();
   renderArchitectures();
+}
+
+function collectConstructorBlueprintFromForm() {
+  const blueprint = deepClone(uiState.constructorBlueprint || makeDefaultConstructorBlueprint());
+  blueprint.name = document.getElementById("constructor-name").value.trim() || blueprint.name || "custom_detector_builder";
+  blueprint.base_model = document.getElementById("constructor-base-model").value || blueprint.base_model;
+  blueprint.goal = document.getElementById("constructor-goal").value || blueprint.goal;
+  blueprint.checkpoint = document.getElementById("constructor-checkpoint").value.trim() || blueprint.checkpoint;
+  blueprint.dataset_id = document.getElementById("constructor-dataset").value || "";
+  blueprint.labels = document.getElementById("constructor-labels").value.split(",").map((item) => item.trim()).filter(Boolean);
+  return blueprint;
+}
+
+function syncConstructorPreview(preview, message) {
+  uiState.constructorPreview = preview;
+  uiState.constructorBlueprint = deepClone(preview.blueprint || uiState.constructorBlueprint || makeDefaultConstructorBlueprint());
+  document.getElementById("architecture-name").value = uiState.constructorBlueprint.name || "custom_detector_builder";
+  document.getElementById("architecture-config").value = preview.config_yaml || defaultArchitectureConfigText;
+  document.getElementById("architecture-source").value = preview.source_code || defaultArchitectureSource;
+  document.getElementById("architecture-active-badge").textContent = preview.summary?.model_slug || uiState.constructorBlueprint.name || "Builder preview";
+  renderConstructorBuilder();
+  setHint("constructor-status", message, "ok");
+}
+
+async function loadConstructorCatalog() {
+  try {
+    uiState.constructorCatalog = await apiRequest("/api/control/architectures/constructor/catalog");
+    if (!uiState.constructorBlueprint) {
+      uiState.constructorBlueprint = makeDefaultConstructorBlueprint();
+    }
+  } catch {
+    uiState.constructorCatalog = fallbackConstructorCatalog;
+    if (!uiState.constructorBlueprint) {
+      uiState.constructorBlueprint = makeDefaultConstructorBlueprint();
+    }
+  }
+  renderConstructorBuilder();
+}
+
+async function generateConstructorPreview(message = "Constructor preview generated.") {
+  const blueprint = collectConstructorBlueprintFromForm();
+  const preview = await apiRequest("/api/control/architectures/constructor/preview", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      blueprint,
+      dataset_id: blueprint.dataset_id || null,
+    }),
+  });
+  syncConstructorPreview(preview, message);
+}
+
+async function requestConstructorRecommendation() {
+  const blueprint = collectConstructorBlueprintFromForm();
+  const preview = await apiRequest("/api/control/architectures/constructor/recommend", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      blueprint,
+      dataset_id: blueprint.dataset_id || null,
+    }),
+  });
+  syncConstructorPreview(preview, "Recommendation applied to the constructor.");
+}
+
+function addConstructorLayer(headName, layerType) {
+  const layer = createConstructorLayer(layerType);
+  if (!layer) return;
+  const blueprint = collectConstructorBlueprintFromForm();
+  blueprint.head_specs[headName].push(layer);
+  uiState.constructorBlueprint = blueprint;
+  renderConstructorBuilder();
+}
+
+function insertConstructorLayer(headName, index, layerType) {
+  const layer = createConstructorLayer(layerType);
+  if (!layer) return;
+  const blueprint = collectConstructorBlueprintFromForm();
+  const layers = blueprint.head_specs?.[headName];
+  if (!Array.isArray(layers)) return;
+  const safeIndex = Math.max(0, Math.min(Number(index) || 0, layers.length));
+  layers.splice(safeIndex, 0, layer);
+  uiState.constructorBlueprint = blueprint;
+  renderConstructorBuilder();
+}
+
+function moveConstructorLayer(headName, index, direction) {
+  const blueprint = collectConstructorBlueprintFromForm();
+  const layers = blueprint.head_specs?.[headName];
+  if (!Array.isArray(layers) || !layers[index]) return;
+  const nextIndex = direction === "up" ? index - 1 : index + 1;
+  if (nextIndex < 0 || nextIndex >= layers.length) return;
+  [layers[index], layers[nextIndex]] = [layers[nextIndex], layers[index]];
+  uiState.constructorBlueprint = blueprint;
+  renderConstructorBuilder();
+}
+
+function moveConstructorLayerTo(headName, index, targetHeadName, targetIndex) {
+  const blueprint = collectConstructorBlueprintFromForm();
+  const sourceLayers = blueprint.head_specs?.[headName];
+  const targetLayers = blueprint.head_specs?.[targetHeadName];
+  if (!Array.isArray(sourceLayers) || !Array.isArray(targetLayers) || !sourceLayers[index]) return;
+  const [layer] = sourceLayers.splice(index, 1);
+  let safeIndex = Math.max(0, Math.min(Number(targetIndex) || 0, targetLayers.length));
+  if (headName === targetHeadName && safeIndex > index) {
+    safeIndex -= 1;
+  }
+  targetLayers.splice(safeIndex, 0, layer);
+  uiState.constructorBlueprint = blueprint;
+  renderConstructorBuilder();
+}
+
+function removeConstructorLayer(headName, index) {
+  const blueprint = collectConstructorBlueprintFromForm();
+  const layers = blueprint.head_specs?.[headName];
+  if (!Array.isArray(layers)) return;
+  layers.splice(index, 1);
+  uiState.constructorBlueprint = blueprint;
+  renderConstructorBuilder();
+}
+
+function updateConstructorLayerParam(headName, index, paramName, rawValue, inputType) {
+  const blueprint = collectConstructorBlueprintFromForm();
+  const layer = blueprint.head_specs?.[headName]?.[index];
+  if (!layer) return;
+  if (inputType === "checkbox") {
+    layer.params[paramName] = Boolean(rawValue);
+  } else if (inputType === "number") {
+    layer.params[paramName] = rawValue === "" ? "" : Number(rawValue);
+  } else {
+    layer.params[paramName] = rawValue;
+  }
+  uiState.constructorBlueprint = blueprint;
+}
+
+function clearConstructorDropHints() {
+  document.querySelectorAll(".stack-drop-slot.is-drop-target, .builder-stack.is-drop-target").forEach((node) => {
+    node.classList.remove("is-drop-target");
+  });
+}
+
+function handleConstructorDrop(headName, index) {
+  if (constructorDragState.mode === "new" && constructorDragState.layerType) {
+    insertConstructorLayer(headName, index, constructorDragState.layerType);
+    setHint("constructor-status", `${getConstructorHeadLabel(headName)} updated with ${constructorDragState.layerType}.`, "ok");
+    clearConstructorDragState();
+    scheduleConstructorPreview();
+    return;
+  }
+  if (constructorDragState.mode === "move" && constructorDragState.sourceHead) {
+    moveConstructorLayerTo(constructorDragState.sourceHead, constructorDragState.sourceIndex, headName, index);
+    setHint("constructor-status", `Moved block into ${getConstructorHeadLabel(headName)}.`, "ok");
+    clearConstructorDragState();
+    scheduleConstructorPreview();
+  }
+}
+
+function clearConstructorDragState() {
+  constructorDragState.mode = null;
+  constructorDragState.layerType = "";
+  constructorDragState.sourceHead = "";
+  constructorDragState.sourceIndex = -1;
+  document.querySelectorAll(".layer-palette-card.is-dragging, .layer-card.is-dragging").forEach((node) => node.classList.remove("is-dragging"));
+  clearConstructorDropHints();
+}
+
+const scheduleConstructorPreview = debounce(() => generateConstructorPreview("Constructor preview refreshed.").catch((error) => setHint("constructor-status", String(error.message || error), "error")), 500);
+
+function resetConstructorBuilder() {
+  uiState.constructorBlueprint = makeDefaultConstructorBlueprint();
+  uiState.constructorPreview = null;
+  renderConstructorBuilder();
+  setHint("constructor-status", "Constructor reset to the default blueprint.", "warn");
 }
 
 function buildExperimentQuery() {
@@ -947,6 +1604,7 @@ async function saveCurrentConfig() {
 }
 
 async function saveArchitecture() {
+  const constructorBlueprint = collectConstructorBlueprintFromForm();
   const payload = await apiRequest("/api/control/architectures", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -956,9 +1614,13 @@ async function saveArchitecture() {
       tags: document.getElementById("architecture-tags").value.split(",").map((item) => item.trim()).filter(Boolean),
       config_yaml: document.getElementById("architecture-config").value,
       source_code: document.getElementById("architecture-source").value,
+      blueprint: constructorBlueprint,
     }),
   });
   uiState.selectedArchitectureId = payload.id;
+  if (payload.blueprint) {
+    uiState.constructorBlueprint = deepClone(payload.blueprint);
+  }
   document.getElementById("architecture-active-badge").textContent = payload.name || payload.id;
   setHint("architecture-status", `Architecture ${payload.name || payload.id} saved.`, "ok");
   await loadArchitectures();
@@ -980,6 +1642,7 @@ async function uploadDataset() {
   const payload = await response.json();
   uiState.datasets = payload.items || [];
   renderDatasets();
+  populateConstructorDatasetOptions();
   renderSummary();
   setHint("dataset-status", payload.archive_extracted ? "Dataset archive uploaded and extracted." : "Dataset uploaded.", "ok");
   form.reset();
@@ -1004,6 +1667,7 @@ async function registerDataset() {
   });
   uiState.datasets = response.items || [];
   renderDatasets();
+  populateConstructorDatasetOptions();
   renderSummary();
   setHint("dataset-status", `Dataset ${payload.name} registered.`, "ok");
   document.getElementById("dataset-register-form").reset();
@@ -1134,6 +1798,122 @@ function setupStudioHandlers() {
     const button = event.target.closest("[data-architecture-load]");
     if (button) loadArchitectureDetail(button.dataset.architectureLoad).catch((error) => setHint("architecture-status", String(error.message || error), "error"));
   });
+  ["constructor-name", "constructor-dataset", "constructor-base-model", "constructor-goal", "constructor-checkpoint", "constructor-labels"].forEach((id) => {
+    document.getElementById(id).addEventListener(id.includes("name") || id.includes("checkpoint") || id.includes("labels") ? "input" : "change", (event) => {
+      if (id === "constructor-base-model") {
+        const selected = (getConstructorCatalog().base_models || []).find((item) => item.id === event.target.value);
+        if (selected) {
+          document.getElementById("constructor-checkpoint").value = selected.checkpoint || "";
+        }
+      }
+      uiState.constructorBlueprint = collectConstructorBlueprintFromForm();
+      if (["constructor-dataset", "constructor-base-model", "constructor-goal"].includes(id)) {
+        renderConstructorBuilder();
+      }
+      scheduleConstructorPreview();
+    });
+  });
+  document.getElementById("constructor-recommend").addEventListener("click", () => requestConstructorRecommendation().catch((error) => setHint("constructor-status", String(error.message || error), "error")));
+  document.getElementById("constructor-generate").addEventListener("click", () => generateConstructorPreview().catch((error) => setHint("constructor-status", String(error.message || error), "error")));
+  document.getElementById("constructor-reset").addEventListener("click", resetConstructorBuilder);
+  document.getElementById("constructor-layer-catalog").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-layer-add]");
+    if (!button) return;
+    addConstructorLayer(button.dataset.layerTarget, button.dataset.layerAdd);
+    scheduleConstructorPreview();
+  });
+  document.getElementById("constructor-layer-catalog").addEventListener("dragstart", (event) => {
+    const card = event.target.closest("[data-layer-drag-type]");
+    if (!card) return;
+    constructorDragState.mode = "new";
+    constructorDragState.layerType = card.dataset.layerDragType || "";
+    constructorDragState.sourceHead = "";
+    constructorDragState.sourceIndex = -1;
+    card.classList.add("is-dragging");
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = "copy";
+      event.dataTransfer.setData("text/plain", constructorDragState.layerType);
+    }
+    setHint("constructor-status", `Dragging ${constructorDragState.layerType}. Drop it into a lane.`, "ok");
+  });
+  document.getElementById("constructor-layer-catalog").addEventListener("dragend", clearConstructorDragState);
+  ["constructor-classifier-stack", "constructor-bbox-stack"].forEach((containerId) => {
+    const container = document.getElementById(containerId);
+    container.addEventListener("click", (event) => {
+      const removeButton = event.target.closest("[data-layer-remove]");
+      if (removeButton) {
+        removeConstructorLayer(removeButton.dataset.headName, Number(removeButton.dataset.layerIndex));
+        scheduleConstructorPreview();
+        return;
+      }
+      const moveButton = event.target.closest("[data-layer-move]");
+      if (moveButton) {
+        moveConstructorLayer(moveButton.dataset.headName, Number(moveButton.dataset.layerIndex), moveButton.dataset.layerMove);
+        scheduleConstructorPreview();
+        return;
+      }
+      const dropSlot = event.target.closest("[data-drop-head][data-drop-index]");
+      if (dropSlot && constructorDragState.mode) {
+        handleConstructorDrop(dropSlot.dataset.dropHead, Number(dropSlot.dataset.dropIndex));
+      }
+    });
+    container.addEventListener("input", (event) => {
+      const input = event.target.closest("[data-layer-param]");
+      if (!input) return;
+      updateConstructorLayerParam(input.dataset.headName, Number(input.dataset.layerIndex), input.dataset.layerParam, input.type === "checkbox" ? input.checked : input.value, input.type);
+      scheduleConstructorPreview();
+    });
+    container.addEventListener("change", (event) => {
+      const input = event.target.closest("[data-layer-param]");
+      if (!input) return;
+      updateConstructorLayerParam(input.dataset.headName, Number(input.dataset.layerIndex), input.dataset.layerParam, input.type === "checkbox" ? input.checked : input.value, input.type);
+      scheduleConstructorPreview();
+    });
+    container.addEventListener("dragstart", (event) => {
+      const card = event.target.closest("[data-stack-layer]");
+      if (!card) return;
+      constructorDragState.mode = "move";
+      constructorDragState.layerType = "";
+      constructorDragState.sourceHead = card.dataset.headName || "";
+      constructorDragState.sourceIndex = Number(card.dataset.layerIndex);
+      card.classList.add("is-dragging");
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", `${constructorDragState.sourceHead}:${constructorDragState.sourceIndex}`);
+      }
+      setHint("constructor-status", `Moving a block inside the builder. Drop it where it should live.`, "ok");
+    });
+    container.addEventListener("dragend", clearConstructorDragState);
+    container.addEventListener("dragover", (event) => {
+      if (!constructorDragState.mode) return;
+      event.preventDefault();
+      const target = event.target.closest("[data-drop-head][data-drop-index]") || event.currentTarget;
+      clearConstructorDropHints();
+      target.classList.add("is-drop-target");
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = constructorDragState.mode === "new" ? "copy" : "move";
+      }
+    });
+    container.addEventListener("dragleave", (event) => {
+      if (!event.currentTarget.contains(event.relatedTarget)) {
+        clearConstructorDropHints();
+      }
+    });
+    container.addEventListener("drop", (event) => {
+      if (!constructorDragState.mode) return;
+      event.preventDefault();
+      const dropTarget = event.target.closest("[data-drop-head][data-drop-index]");
+      if (dropTarget) {
+        handleConstructorDrop(dropTarget.dataset.dropHead, Number(dropTarget.dataset.dropIndex));
+        return;
+      }
+      const headName = event.currentTarget.dataset.headName;
+      if (headName) {
+        const layerCount = (uiState.constructorBlueprint?.head_specs?.[headName] || []).length;
+        handleConstructorDrop(headName, layerCount);
+      }
+    });
+  });
   document.getElementById("launch-train").addEventListener("click", () => launchJob("train").catch((error) => setHint("studio-status", String(error.message || error), "error")));
   document.getElementById("launch-evaluate").addEventListener("click", () => launchJob("evaluate").catch((error) => setHint("studio-status", String(error.message || error), "error")));
 }
@@ -1195,6 +1975,7 @@ function setupResourceHandlers() {
 }
 
 async function bootstrapData() {
+  await loadConstructorCatalog();
   try {
     await loadCatalog();
   } catch (error) {
@@ -1210,6 +1991,7 @@ async function bootstrapData() {
 function bootstrap() {
   setupTabs();
   setupAppearanceControls();
+  setupPanelGridLayout();
   setupQuickActionButtons();
   setupDashboardSwitcher();
   setupTensorBoardFrame();

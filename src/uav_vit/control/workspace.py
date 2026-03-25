@@ -140,6 +140,7 @@ class WorkspaceService:
         source_code: str | None,
         description: str = "",
         tags: list[str] | None = None,
+        blueprint: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         slug = slugify(name)
         self.store.custom_models_dir.mkdir(parents=True, exist_ok=True)
@@ -171,6 +172,7 @@ class WorkspaceService:
                 "name": name,
                 "description": description,
                 "tags": _normalize_tags(tags),
+                "blueprint": blueprint,
                 "config_path": str(config_path.relative_to(self.store.workspace_root)),
                 "source_path": str(source_path.relative_to(self.store.workspace_root)),
                 "updated_at": utc_now(),
@@ -193,6 +195,7 @@ class WorkspaceService:
                     else "custom",
                     "description": meta.get("description", ""),
                     "tags": meta.get("tags", []),
+                    "has_blueprint": bool(meta.get("blueprint")),
                     "config_path": meta.get("config_path"),
                     "source_path": meta.get("source_path"),
                 }
@@ -212,6 +215,7 @@ class WorkspaceService:
                     "kind": "custom",
                     "description": meta.get("description", ""),
                     "tags": meta.get("tags", []),
+                    "has_blueprint": bool(meta.get("blueprint")),
                     "config_path": meta.get(
                         "config_path",
                         str(
@@ -239,6 +243,7 @@ class WorkspaceService:
             "name": meta.get("name", slug),
             "description": meta.get("description", ""),
             "tags": meta.get("tags", []),
+            "blueprint": meta.get("blueprint"),
             "source_code": source_code,
             "config": config,
             "config_path": str(config_path.relative_to(self.store.workspace_root))

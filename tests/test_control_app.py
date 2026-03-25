@@ -159,6 +159,29 @@ def test_config_architecture_and_experiment_metadata(
     monkeypatch,  # type: ignore[no-untyped-def]
 ) -> None:
     with make_client(tmp_path, monkeypatch) as client:
+        response = client.get("/architectures/constructor/catalog")
+        assert response.status_code == 200
+        catalog = response.json()
+        assert any(item["type"] == "linear" for item in catalog["layers"])
+
+        response = client.post(
+            "/architectures/constructor/recommend",
+            json={
+                "dataset_id": "data_processed_demo",
+                "blueprint": {
+                    "name": "builder_detector",
+                    "base_model": "detr_resnet50",
+                    "goal": "accuracy",
+                    "labels": ["uav"],
+                },
+            },
+        )
+        assert response.status_code == 200
+        recommendation = response.json()
+        assert recommendation["blueprint"]["head_specs"]["classifier"]
+        assert recommendation["source_code"]
+        assert "constructor:" in recommendation["config_yaml"]
+
         response = client.put(
             "/configs/demo_copy", json={"config_yaml": BASE_CONFIG.replace("demo_run", "demo_copy")}
         )
@@ -176,6 +199,7 @@ def test_config_architecture_and_experiment_metadata(
                 "description": "custom detector",
                 "tags": ["custom", "vit"],
                 "config_yaml": BASE_CONFIG.replace("yolos_tiny", "my_custom_detector"),
+                "blueprint": recommendation["blueprint"],
                 "source_code": (
                     "from uav_vit.models import ModelBundle, register_model\n\n"
                     "@register_model('my_custom_detector')\n"
@@ -190,6 +214,7 @@ def test_config_architecture_and_experiment_metadata(
         )
         assert response.status_code == 200
         assert response.json()["id"] == "my_custom_detector"
+        assert response.json()["blueprint"]["name"] == "builder_detector"
         assert (tmp_path / "src" / "custom_models" / "my_custom_detector.py").exists()
 
         response = client.get("/experiments")

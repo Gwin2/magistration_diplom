@@ -77,6 +77,7 @@ UI доступен по `http://localhost:${UI_HOST_PORT}` (по умолчан
 - `Overview` — health stack, KPI, рекомендации по лучшим запускам и встроенные Grafana dashboards
 - `Datasets` — загрузка архивов, регистрация готовых каталогов и скачивание dataset bundle
 - `Studio` — редактирование YAML-конфигов, библиотека архитектур, шаблоны для своих моделей и запуск train/eval
+- `Architecture Constructor` внутри `Studio` — сборка кастомных detector heads из слоёв, автозаполнение параметров и рекомендации по датасету
 - `Experiments` — список запусков, фильтры, сравнение, теги, рейтинг, заметки, jobs и TensorBoard
 - `Serving` — регистрация моделей в TorchServe, inference probe и единый gateway ко всем web-сервисам
 - `Resources` — генерация resource override, потребление по контейнерам и процессам
@@ -103,6 +104,12 @@ Copy-Item .env.example .env
 docker compose up -d --build
 ```
 
+Контейнеры теперь создаются без фиксированных `container_name`. Это означает:
+
+- безопасный запуск из CLI и из IDE без конфликтов имён
+- корректную работу `docker compose stop` -> `docker compose start`
+- project-scoped имена контейнеров вида `magistration_diplom-mlflow-1`, `magistration_diplom-ui-1`
+
 Полный режим с обучением и инференсом:
 
 ```bash
@@ -114,6 +121,13 @@ docker compose --profile training --profile inference up -d --build
 ```bash
 docker compose --profile training up -d --build
 docker compose --profile inference up -d --build
+```
+
+Остановка и повторный запуск:
+
+```bash
+docker compose stop
+docker compose start
 ```
 
 ### Сервисы по умолчанию
@@ -143,6 +157,33 @@ docker compose --profile inference up -d --build
 - `/api/torchserve`, `/api/torchserve-mgmt`, `/api/torchserve-metrics`
 - `/api/cadvisor`, `/api/node-exporter`, `/api/process-exporter`, `/api/postgres-exporter`
 
+### Troubleshooting
+
+Если IDE показывает ошибку вида `Conflict. The container name ... is already in use`:
+
+1. Обновите состояние Compose-приложения в IDE (`Reload` или `Refresh`).
+2. Убедитесь, что стек этого проекта уже не поднят отдельной копией из другого окна/каталога.
+3. Выполните:
+
+```bash
+docker compose down --remove-orphans
+docker compose up -d --build
+```
+
+4. Если менялись только сервисы, а не сама конфигурация, допустим обычный быстрый сценарий:
+
+```bash
+docker compose stop
+docker compose start
+```
+
+Для диагностики используйте:
+
+```bash
+docker compose ps -a
+docker ps -a
+```
+
 ## Кастомные архитектуры
 
 1. Создайте модуль, например `src/custom_models/my_detector.py`.
@@ -151,6 +192,7 @@ docker compose --profile inference up -d --build
    - `model.name: my_detector`
    - `model.custom_modules: ["custom_models.my_detector"]`
 4. При желании редактируйте и сохраняйте шаблон прямо из `Studio` во фронтенде.
+5. Для конструктора доступны рекомендации по `goal` и dataset tags, после чего preview автоматически синхронизируется в code/YAML editors.
 
 Подробнее: [docs/architecture_extension.md](docs/architecture_extension.md)
 

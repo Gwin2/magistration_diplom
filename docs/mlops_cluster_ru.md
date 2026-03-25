@@ -35,6 +35,8 @@ Copy-Item .env.example .env
 docker compose up -d --build
 ```
 
+Контейнеры в compose не используют фиксированные `container_name`, поэтому стек можно безопасно запускать как из терминала, так и из IDE. Docker будет создавать project-scoped имена вида `magistration_diplom-mlflow-1`.
+
 ### Полный режим
 
 ```bash
@@ -61,6 +63,13 @@ docker compose --profile training --profile inference up -d --build
 - TorchServe ping: `http://localhost:${TORCHSERVE_INFERENCE_HOST_PORT}/ping` (`18080`)
 
 После изменения портов выполните `docker compose down` и затем `docker compose up -d --build`.
+
+Для обычной остановки и последующего старта используйте:
+
+```bash
+docker compose stop
+docker compose start
+```
 
 ## Train/Eval с логированием
 

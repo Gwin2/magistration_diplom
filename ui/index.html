@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>UAV Mission Control</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -102,6 +103,8 @@
           </div>
         </div>
         <button id="motion-toggle" class="btn btn-ghost" type="button" aria-pressed="false">Motion: on</button>
+        <button id="layout-edit-toggle" class="btn btn-ghost" type="button" aria-pressed="false">Layout edit: off</button>
+        <button id="layout-reset" class="btn btn-ghost" type="button">Reset Layout</button>
       </section>
     </header>
 
@@ -119,8 +122,8 @@
       </aside>
 
       <section class="tab-content">
-        <section class="tab-pane tab-pane-grid is-active" id="tab-overview">
-          <article class="panel">
+        <section class="tab-pane tab-pane-grid overview-layout is-active" id="tab-overview">
+          <article class="panel layout-main layout-hero">
             <div class="panel-title-row"><h2>Mission Snapshot</h2><span class="tag">Native Control</span></div>
             <div class="mission-hero">
               <div class="hero-copy">
@@ -173,7 +176,7 @@
             <div id="recommendations-list" class="recommendation-list"></div>
           </article>
 
-          <article class="panel panel-compact">
+          <article class="panel panel-compact layout-side">
             <div class="panel-title-row"><h2>Live Metrics</h2><span class="tag">Prometheus</span></div>
             <div class="kpi-grid">
               <div class="kpi-card" data-metric="map50"><p class="kpi-label">mAP50</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
@@ -187,7 +190,7 @@
             </div>
           </article>
 
-          <article class="panel span-all">
+          <article class="panel span-all layout-wide">
             <div class="panel-title-row">
               <h2>Dashboards</h2>
               <div class="dashboard-toolbar">
@@ -210,8 +213,8 @@
           </article>
         </section>
 
-        <section class="tab-pane tab-pane-grid" id="tab-datasets">
-          <article class="panel">
+        <section class="tab-pane tab-pane-grid datasets-layout" id="tab-datasets">
+          <article class="panel layout-main">
             <div class="panel-title-row"><h2>Dataset Intake</h2><span class="tag">Upload + Register</span></div>
             <form id="dataset-upload-form" class="form-grid">
               <label>Dataset name<input name="dataset_name" type="text" placeholder="uav_night_fog_v1" /></label>
@@ -231,7 +234,7 @@
             <p id="dataset-status" class="hint">Dataset intake is ready.</p>
           </article>
 
-          <article class="panel span-all">
+          <article class="panel span-all layout-wide">
             <div class="panel-title-row">
               <h2>Dataset Library</h2>
               <div class="toolbar-inline">
@@ -243,8 +246,8 @@
           </article>
         </section>
 
-        <section class="tab-pane tab-pane-grid" id="tab-studio">
-          <article class="panel">
+        <section class="tab-pane tab-pane-grid studio-layout" id="tab-studio">
+          <article class="panel layout-rail">
             <div class="panel-title-row"><h2>Experiment Configs</h2><span id="config-active-badge" class="tag">No config</span></div>
             <div class="toolbar-inline">
               <input id="config-search" type="text" placeholder="Filter configs" />
@@ -254,7 +257,7 @@
             <div id="config-list" class="library-list"></div>
           </article>
 
-          <article class="panel">
+          <article class="panel layout-main">
             <div class="panel-title-row"><h2>Config Editor</h2><span class="tag">YAML</span></div>
             <div class="form-grid"><label>Config name<input id="config-name" type="text" placeholder="new_experiment" /></label></div>
             <textarea id="config-editor" class="editor code-editor" rows="20" spellcheck="false"></textarea>
@@ -265,7 +268,7 @@
             <p id="config-status" class="hint">Load or create a config to start.</p>
           </article>
 
-          <article class="panel">
+          <article class="panel layout-rail">
             <div class="panel-title-row"><h2>Architecture Library</h2><span id="architecture-active-badge" class="tag">No model</span></div>
             <div class="toolbar-inline">
               <input id="architecture-search" type="text" placeholder="Filter architectures" />
@@ -275,7 +278,66 @@
             <div id="architecture-list" class="library-list"></div>
           </article>
 
-          <article class="panel">
+          <article class="panel span-all layout-wide">
+            <div class="panel-title-row"><h2>Architecture Constructor</h2><span class="tag">Drag, Drop, Tune</span></div>
+            <div class="constructor-grid">
+              <section class="constructor-side">
+                <div class="constructor-guide">
+                  <article class="constructor-step-card">
+                    <span class="constructor-step-index">1</span>
+                    <div><strong>Pick blocks</strong><p>Choose layers from the palette like building pieces.</p></div>
+                  </article>
+                  <article class="constructor-step-card">
+                    <span class="constructor-step-index">2</span>
+                    <div><strong>Drop into heads</strong><p>Drag cards into the classifier or bbox lane and reorder them freely.</p></div>
+                  </article>
+                  <article class="constructor-step-card">
+                    <span class="constructor-step-index">3</span>
+                    <div><strong>Tune and preview</strong><p>Parameters are auto-filled, then refined with recommendations.</p></div>
+                  </article>
+                </div>
+                <div class="form-grid">
+                  <label>Name<input id="constructor-name" type="text" placeholder="builder_detector" /></label>
+                  <label>Dataset<select id="constructor-dataset"><option value="">Auto / none</option></select></label>
+                  <label>Base model<select id="constructor-base-model"></select></label>
+                  <label>Goal<select id="constructor-goal"></select></label>
+                  <label>Checkpoint<input id="constructor-checkpoint" type="text" placeholder="facebook/detr-resnet-50" /></label>
+                  <label>Labels<input id="constructor-labels" type="text" placeholder="uav" /></label>
+                </div>
+                <div class="inline-actions">
+                  <button id="constructor-recommend" class="btn btn-accent" type="button">Recommend</button>
+                  <button id="constructor-generate" class="btn btn-primary" type="button">Generate Preview</button>
+                  <button id="constructor-reset" class="btn" type="button">Reset</button>
+                </div>
+                <p id="constructor-status" class="hint">Drag a layer tile into a head lane. Default parameters appear automatically.</p>
+                <div id="constructor-summary" class="recommendation-list constructor-summary"></div>
+              </section>
+
+              <section class="constructor-main">
+                <div class="constructor-playground">
+                  <div class="constructor-palette-panel">
+                    <div class="subsection-head"><h3>Layer Palette</h3><span class="hint">Grab a tile and drop it into a lane.</span></div>
+                    <div id="constructor-layer-catalog" class="layer-catalog layer-catalog-play"></div>
+                  </div>
+                  <div class="constructor-stack-panel">
+                    <div class="subsection-head"><h3>Build Area</h3><span class="hint">Blue lane for class logits, amber lane for boxes.</span></div>
+                    <div class="constructor-stack-grid">
+                      <div class="stack-panel stack-panel-classifier">
+                        <div class="subsection-head"><h3>Classifier Head</h3><span class="hint">Drop blocks for class logits</span></div>
+                        <div id="constructor-classifier-stack" class="builder-stack" data-head-name="classifier"></div>
+                      </div>
+                      <div class="stack-panel stack-panel-bbox">
+                        <div class="subsection-head"><h3>BBox Head</h3><span class="hint">Drop blocks for box regression</span></div>
+                        <div id="constructor-bbox-stack" class="builder-stack" data-head-name="bbox"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </article>
+
+          <article class="panel layout-main">
             <div class="panel-title-row"><h2>Architecture Editor</h2><span class="tag">Code + Template</span></div>
             <div class="form-grid">
               <label>Name<input id="architecture-name" type="text" placeholder="my_detector" /></label>
@@ -291,7 +353,7 @@
             <p id="architecture-status" class="hint">Builtin and custom models are editable here.</p>
           </article>
 
-          <article class="panel span-all">
+          <article class="panel span-all layout-wide">
             <div class="panel-title-row"><h2>Launch Control</h2><span class="tag">Train / Evaluate</span></div>
             <div class="form-grid">
               <label>Save current YAML as<input id="launch-save-as" type="text" placeholder="optional_config_name" /></label>
@@ -306,8 +368,8 @@
           </article>
         </section>
 
-        <section class="tab-pane tab-pane-grid" id="tab-experiments">
-          <article class="panel span-all">
+        <section class="tab-pane tab-pane-grid experiments-layout" id="tab-experiments">
+          <article class="panel span-all layout-wide">
             <div class="panel-title-row"><h2>Experiment Registry</h2><span class="tag">MLflow + Local Runs</span></div>
             <div class="form-grid filters-grid">
               <label>Search<input id="experiment-search" type="text" placeholder="run name, model, tag" /></label>
@@ -324,9 +386,9 @@
             </div>
           </article>
 
-          <article class="panel"><div class="panel-title-row"><h2>Compare Runs</h2><span class="tag">Selected</span></div><div id="compare-shell" class="table-shell"></div></article>
+          <article class="panel layout-half"><div class="panel-title-row"><h2>Compare Runs</h2><span class="tag">Selected</span></div><div id="compare-shell" class="table-shell"></div></article>
 
-          <article class="panel">
+          <article class="panel layout-half">
             <div class="panel-title-row"><h2>Experiment Admin</h2><span id="experiment-selected-badge" class="tag">No selection</span></div>
             <div class="form-grid">
               <label>Tags<input id="experiment-tags" type="text" placeholder="best, night, low-latency" /></label>
@@ -340,21 +402,21 @@
             <p id="experiment-meta-status" class="hint">Select a run to edit tags, rating and notes.</p>
           </article>
 
-          <article class="panel"><div class="panel-title-row"><h2>Jobs</h2><span class="tag">Lifecycle</span></div><div id="job-list" class="job-list"></div></article>
+          <article class="panel layout-half"><div class="panel-title-row"><h2>Jobs</h2><span class="tag">Lifecycle</span></div><div id="job-list" class="job-list"></div></article>
 
-          <article class="panel">
+          <article class="panel layout-half">
             <div class="panel-title-row"><h2>Job Console</h2><div class="toolbar-inline"><span id="job-log-label" class="hint">Select a job</span><button id="job-log-refresh" class="btn btn-inline" type="button">Refresh</button></div></div>
             <pre id="job-log-output" class="code-box log-box">No job selected.</pre>
           </article>
 
-          <article class="panel span-all">
+          <article class="panel span-all layout-wide">
             <div class="panel-title-row"><h2>TensorBoard</h2><div class="dashboard-meta"><a href="/api/tensorboard/" target="_blank" rel="noreferrer">Open full</a><button id="tensorboard-reload" class="btn btn-inline" type="button">Reload</button><span id="tensorboard-status" class="hint">Checking TensorBoard...</span></div></div>
             <div class="dashboard-shell" id="tensorboard-shell"><div id="tensorboard-loader" class="dashboard-loader">Loading TensorBoard...</div><iframe id="tensorboard-frame" title="TensorBoard" loading="lazy"></iframe></div>
           </article>
         </section>
 
-        <section class="tab-pane tab-pane-grid" id="tab-serving">
-          <article class="panel">
+        <section class="tab-pane tab-pane-grid serving-layout" id="tab-serving">
+          <article class="panel layout-half">
             <div class="panel-title-row"><h2>TorchServe Registry</h2><span class="tag">Admin</span></div>
             <div class="form-grid">
               <label>Model name<input id="torchserve-model-name" type="text" placeholder="uav_detector" /></label>
@@ -366,7 +428,7 @@
             <div id="torchserve-models" class="library-list"></div>
           </article>
 
-          <article class="panel">
+          <article class="panel layout-half">
             <div class="panel-title-row"><h2>Inference Probe</h2><span class="tag">Predict</span></div>
             <div class="form-grid">
               <label>Model name<input id="inference-model-name" type="text" placeholder="uav_detector" /></label>
@@ -376,7 +438,7 @@
             <pre id="inference-output" class="code-box">Inference results will appear here.</pre>
           </article>
 
-          <article class="panel span-all">
+          <article class="panel span-all layout-wide">
             <div class="panel-title-row"><h2>Service Gateway</h2><span class="tag">Direct Access</span></div>
             <div class="link-grid rich-links">
               <a href="/api/control/health" target="_blank" rel="noreferrer">Control API</a>
@@ -400,8 +462,8 @@
           </article>
         </section>
 
-        <section class="tab-pane tab-pane-grid" id="tab-resources">
-          <article class="panel">
+        <section class="tab-pane tab-pane-grid resources-layout" id="tab-resources">
+          <article class="panel layout-third">
             <div class="panel-title-row"><h2>Resource Governance</h2><span class="tag">Capacity</span></div>
             <div class="form-grid">
               <label>Profile<select id="resource-profile"><option value="balanced">balanced</option><option value="training">training-heavy</option><option value="inference">inference-heavy</option><option value="eco">eco mode</option></select></label>
@@ -413,7 +475,7 @@
             <pre id="resource-override" class="code-box"></pre>
           </article>
 
-          <article class="panel">
+          <article class="panel layout-mainwide">
             <div class="panel-title-row"><h2>Container and Process Consumption</h2><span class="tag">Deep Monitor</span></div>
             <div class="usage-grid">
               <div class="table-shell usage-card"><h3>Containers</h3><table><thead><tr><th>Container</th><th>CPU %</th><th>Memory MB</th><th>Net RX KB/s</th></tr></thead><tbody id="container-usage-body"></tbody></table></div>
