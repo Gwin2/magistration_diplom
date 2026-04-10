@@ -73,7 +73,8 @@ services:
     pids_limit: 512
 
   torchserve:
-    image: pytorch/torchserve:0.11.1-cpu
+    build:
+    context: ./docker/torchserve
     restart: unless-stopped
     depends_on:
       - mlflow
