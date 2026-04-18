@@ -305,9 +305,7 @@ class LayerNode:
             layer_type=LayerType(data["layer_type"]),
             params=data["params"],
             position=data["position"],
-            activation=(
-                ActivationType(data["activation"]) if data.get("activation") else None
-            ),
+            activation=(ActivationType(data["activation"]) if data.get("activation") else None),
             connections=data.get("connections", []),
         )
 
@@ -349,9 +347,7 @@ class ArchitectureValidator:
         is_valid = len(self.errors) == 0
         return is_valid, self.errors, self.warnings, self.recommendations
 
-    def _check_compatibility(
-        self, current: LayerNode, next_layer: LayerNode, index: int
-    ) -> None:
+    def _check_compatibility(self, current: LayerNode, next_layer: LayerNode, index: int) -> None:
         """Check compatibility between two consecutive layers."""
         current_rules = self.rules.get(current.layer_type)
         next_rules = self.rules.get(next_layer.layer_type)
@@ -400,9 +396,7 @@ class ArchitectureValidator:
             layer_counts[layer.layer_type] = layer_counts.get(layer.layer_type, 0) + 1
 
         if LayerType.FLATTEN in layer_counts and LayerType.LINEAR not in layer_counts:
-            self.warnings.append(
-                "Flatten layer detected without subsequent Linear layer."
-            )
+            self.warnings.append("Flatten layer detected without subsequent Linear layer.")
 
         last_layer = layers[-1]
         if last_layer.layer_type not in [
@@ -694,9 +688,7 @@ def build_model_from_layers(layers: list[dict[str, Any]]) -> Any:
                 )
             )
         elif layer_type == LayerType.BATCHNORM:
-            pytorch_layers.append(
-                nn.BatchNorm2d(num_features=params.get("num_features", 64))
-            )
+            pytorch_layers.append(nn.BatchNorm2d(num_features=params.get("num_features", 64)))
         elif layer_type == LayerType.RELU:
             pytorch_layers.append(nn.ReLU())
         elif layer_type == LayerType.DROPOUT:

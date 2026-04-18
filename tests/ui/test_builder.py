@@ -2,7 +2,6 @@
 Tests for the neural network architecture builder UI module.
 """
 
-
 from uav_vit.ui.builder import (
     LAYER_RULES,
     ActivationType,
@@ -101,9 +100,7 @@ class TestArchitectureValidator:
     def test_validate_empty_architecture(self):
         """Test validation of empty architecture."""
         validator = ArchitectureValidator()
-        is_valid, errors, warnings, recommendations = validator.validate_layer_sequence(
-            []
-        )
+        is_valid, errors, warnings, recommendations = validator.validate_layer_sequence([])
 
         assert is_valid is False
         assert len(errors) == 1
@@ -139,9 +136,7 @@ class TestArchitectureValidator:
             ),
         ]
 
-        is_valid, errors, warnings, recommendations = validator.validate_layer_sequence(
-            layers
-        )
+        is_valid, errors, warnings, recommendations = validator.validate_layer_sequence(layers)
 
         assert is_valid is True
         assert len(errors) == 0

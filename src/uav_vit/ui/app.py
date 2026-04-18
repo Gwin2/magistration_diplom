@@ -10,9 +10,7 @@ import json
 try:
     import gradio as gr
 except ImportError as err:
-    raise ImportError(
-        "Gradio не установлен. Установите его: pip install gradio"
-    ) from err
+    raise ImportError("Gradio не установлен. Установите его: pip install gradio") from err
 
 from uav_vit.ui.builder import (
     EFFICIENCY_TIPS,
@@ -159,7 +157,7 @@ def build_and_summary(architecture_json: str) -> str:
         total_params = sum(p.numel() for p in model.parameters())
         layers_info = []
         for i, layer in enumerate(architecture):
-            layers_info.append(f"{i+1}. {layer['type']}")
+            layers_info.append(f"{i + 1}. {layer['type']}")
 
         result_msg = (
             "✅ Модель построена успешно!\n\n**Структура:**\n"
@@ -189,7 +187,7 @@ def create_ui() -> gr.Blocks:
                 layer_selector = gr.Dropdown(
                     choices=layer_options,
                     label="Выберите тип слоя",
-                    value=layer_options[0] if layer_options else None
+                    value=layer_options[0] if layer_options else None,
                 )
 
                 layer_info_display = gr.Markdown("Выберите слой для просмотра информации.")
@@ -197,7 +195,7 @@ def create_ui() -> gr.Blocks:
                 params_input = gr.Textbox(
                     label="Параметры слоя (JSON)",
                     placeholder='{"channels": 64, "kernel_size": 3}',
-                    lines=3
+                    lines=3,
                 )
 
                 add_btn = gr.Button("➕ Добавить слой", variant="primary")
@@ -206,9 +204,7 @@ def create_ui() -> gr.Blocks:
                 gr.Markdown("### 🏗️ Архитектура Модели")
 
                 architecture_json = gr.Textbox(
-                    label="Конфигурация архитектуры (JSON)",
-                    lines=10,
-                    placeholder="[]"
+                    label="Конфигурация архитектуры (JSON)", lines=10, placeholder="[]"
                 )
 
                 with gr.Row():
@@ -227,67 +223,51 @@ def create_ui() -> gr.Blocks:
                 gr.Markdown("### 📚 Примеры Архитектур")
                 example_names = list(get_architecture_examples().keys())
                 example_selector = gr.Dropdown(
-                    choices=example_names,
-                    label="Загрузить пример",
-                    value=None
+                    choices=example_names, label="Загрузить пример", value=None
                 )
                 load_example_btn = gr.Button("Загрузить")
 
         # Обработчики событий
         layer_selector.change(
-            fn=update_layer_info,
-            inputs=[layer_selector],
-            outputs=[layer_info_display]
+            fn=update_layer_info, inputs=[layer_selector], outputs=[layer_info_display]
         )
 
         add_btn.click(
             fn=add_layer_to_architecture,
             inputs=[architecture_json, layer_selector, params_input],
-            outputs=[architecture_json, status_display]
+            outputs=[architecture_json, status_display],
         )
 
         remove_btn.click(
             fn=remove_layer,
             inputs=[architecture_json, layer_index],
-            outputs=[architecture_json, status_display]
+            outputs=[architecture_json, status_display],
         )
 
         move_up_btn.click(
             fn=lambda arch, idx: move_layer(arch, idx, "up"),
             inputs=[architecture_json, layer_index],
-            outputs=[architecture_json, status_display]
+            outputs=[architecture_json, status_display],
         )
 
         move_down_btn.click(
             fn=lambda arch, idx: move_layer(arch, idx, "down"),
             inputs=[architecture_json, layer_index],
-            outputs=[architecture_json, status_display]
+            outputs=[architecture_json, status_display],
         )
 
         validate_btn.click(
-            fn=validate_architecture,
-            inputs=[architecture_json],
-            outputs=[status_display]
+            fn=validate_architecture, inputs=[architecture_json], outputs=[status_display]
         )
 
-        build_btn.click(
-            fn=build_and_summary,
-            inputs=[architecture_json],
-            outputs=[status_display]
-        )
+        build_btn.click(fn=build_and_summary, inputs=[architecture_json], outputs=[status_display])
 
         load_example_btn.click(
-            fn=load_example,
-            inputs=[example_selector],
-            outputs=[architecture_json]
+            fn=load_example, inputs=[example_selector], outputs=[architecture_json]
         )
 
         # Инициализация информации о первом слое
-        app.load(
-            fn=update_layer_info,
-            inputs=[layer_selector],
-            outputs=[layer_info_display]
-        )
+        app.load(fn=update_layer_info, inputs=[layer_selector], outputs=[layer_info_display])
 
     return app
 
@@ -301,11 +281,7 @@ def main():
 
     app = create_ui()
     print(f"🚀 Запуск UI на порту {args.port}...")
-    app.launch(
-        server_port=args.port,
-        server_name=args.server_name,
-        share=args.share
-    )
+    app.launch(server_port=args.port, server_name=args.server_name, share=args.share)
 
 
 if __name__ == "__main__":
