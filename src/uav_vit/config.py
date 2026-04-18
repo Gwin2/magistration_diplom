@@ -10,6 +10,17 @@ REQUIRED_TOP_LEVEL_KEYS = {"experiment", "paths", "model", "train", "eval", "dat
 
 
 def load_yaml(path: str | Path) -> dict[str, Any]:
+    """Load and validate YAML configuration file.
+
+    Args:
+        path: Path to YAML configuration file.
+
+    Returns:
+        Validated configuration dictionary with normalized model settings.
+
+    Raises:
+        ValueError: If config is not a mapping or missing required sections.
+    """
     config_path = Path(path)
     with config_path.open("r", encoding="utf-8") as file:
         config = yaml.safe_load(file) or {}
@@ -27,7 +38,21 @@ def load_yaml(path: str | Path) -> dict[str, Any]:
     return normalized
 
 
+def save_yaml(config: dict[str, Any], path: str | Path) -> None:
+    """Save configuration dictionary to YAML file.
+
+    Args:
+        config: Configuration dictionary to save.
+        path: Path to output YAML file.
+    """
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8") as file:
+        yaml.dump(config, file, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+
 def _normalize_model_config(model_cfg: dict[str, Any]) -> dict[str, Any]:
+    """Normalize model configuration ensuring id2label and label2id consistency."""
     if "id2label" in model_cfg:
         model_cfg["id2label"] = {int(key): value for key, value in model_cfg["id2label"].items()}
     if "label2id" in model_cfg:

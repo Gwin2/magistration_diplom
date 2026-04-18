@@ -1,3 +1,5 @@
+"""Analysis module for metrics aggregation and condition-based evaluation."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -6,6 +8,7 @@ __all__ = ["summarize_runs", "evaluate_by_condition"]
 
 
 def __getattr__(name: str) -> Any:
+    """Lazy loading of analysis functions to avoid circular imports."""
     if name == "summarize_runs":
         from .summarize import summarize_runs
 

@@ -1,37 +1,42 @@
+```
 # Python
 __pycache__/
-*.py[cod]
+*.pyc
 *.pyo
 *.pyd
+.Python
+venv/
+.venv/
+.env
+.env.local
+.env.*
 .pytest_cache/
 .mypy_cache/
-.ruff_cache/
+.coverage
+coverage/
+htmlcov/
 
-# Virtual env
-.venv/
-venv/
-
-# Build
-build/
+# Build and distribution
 dist/
+build/
 *.egg-info/
 
-# Data and artifacts
-data/
-runs/
-reports/
-checkpoints/
-*.pt
-*.onnx
-*.engine
-
-# IDE
-.idea/
+# Editors
 .vscode/
-
-# OS
-Thumbs.db
-.DS_Store
+.idea/
+*.swp
+*.swo
 
 # Logs
 *.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.coverage*
+coverage.xml
+htmlcov/
+.pytest_cache/
+```
