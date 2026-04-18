@@ -1,0 +1,4 @@
+[console_scripts]
+uav-vit = uav_vit.cli:main
+uav-vit-control = uav_vit.control.app:main
+uav-vit-exporter = uav_vit.monitoring.run_metrics_exporter:main

@@ -8,7 +8,9 @@ from pathlib import Path
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Package model checkpoint as TorchServe MAR archive.")
+    parser = argparse.ArgumentParser(
+        description="Package model checkpoint as TorchServe MAR archive."
+    )
     parser.add_argument("--config", required=True, help="Path to experiment YAML config.")
     parser.add_argument("--checkpoint", required=True, help="Path to model checkpoint (.pt).")
     parser.add_argument("--model-name", required=True, help="TorchServe model name.")

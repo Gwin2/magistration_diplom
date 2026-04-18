@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import torch
 from PIL import Image
@@ -117,7 +116,10 @@ def collate_fn(batch: list[dict[str, Any]], image_processor: Any | None = None) 
 
     if image_processor is not None and hasattr(image_processor, "pad"):
         batched = image_processor.pad(
-            [{"pixel_values": pv, **lbl} for pv, lbl in zip(pixel_values_list, labels_list)],
+            [
+                {"pixel_values": pv, **lbl}
+                for pv, lbl in zip(pixel_values_list, labels_list, strict=False)
+            ],
             return_tensors="pt",
         )
         pixel_values = batched["pixel_values"]

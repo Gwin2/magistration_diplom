@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import csv
 import json
 import random
 from dataclasses import dataclass
@@ -59,7 +58,6 @@ def _assign_splits(
     Returns:
         DataFrame with added 'split' column.
     """
-    import pandas as pd
 
     random.seed(seed)
     video_names = frame_table["video_name"].unique()
@@ -76,7 +74,7 @@ def _assign_splits(
 
     train_videos = set(video_names[:n_train])
     val_videos = set(video_names[n_train : n_train + n_val])
-    test_videos = set(video_names[n_train + n_val :])
+    # test_videos = set(video_names[n_train + n_val :])  # Unused, removed
 
     def get_split(video_name: str) -> str:
         if video_name in train_videos:
@@ -114,7 +112,9 @@ def convert_video_annotations_to_coco(config: VideoToCocoConfig) -> dict[str, An
     df = pd.read_csv(config.annotations_csv)
 
     if "split" not in df.columns:
-        df = _assign_splits(df, config.train_ratio, config.val_ratio, config.test_ratio, config.seed)
+        df = _assign_splits(
+            df, config.train_ratio, config.val_ratio, config.test_ratio, config.seed
+        )
 
     category_map: dict[str, int] = {}
     category_id = 1
@@ -131,7 +131,11 @@ def convert_video_annotations_to_coco(config: VideoToCocoConfig) -> dict[str, An
         "categories": [],
     }
 
-    video_paths = {v.name: v for v in config.video_dir.iterdir() if v.suffix.lower() in [".mp4", ".avi", ".mov"]}
+    video_paths = {
+        v.name: v
+        for v in config.video_dir.iterdir()
+        if v.suffix.lower() in [".mp4", ".avi", ".mov"]
+    }
 
     grouped = df.groupby(["video_name", "split"])
     for (video_name, split), group in grouped:
