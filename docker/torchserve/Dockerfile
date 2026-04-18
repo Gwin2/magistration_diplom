@@ -29,9 +29,8 @@ RUN useradd --create-home --shell /bin/bash model-server && \
     mkdir -p /home/model-server/model-store /home/model-server/config && \
     chown -R model-server:model-server /home/model-server
 
-# Copy application source and TorchServe config.
+# Copy application source. Config will be mounted via volume at runtime.
 COPY src /home/model-server/src
-COPY docker/torchserve/config.properties /home/model-server/config/config.properties
 
 # Switch to non-root user and set working directory.
 USER model-server
