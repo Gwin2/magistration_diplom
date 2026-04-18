@@ -74,7 +74,8 @@ services:
 
   torchserve:
     build:
-    context: ./docker/torchserve
+      context: ./docker/torchserve
+      dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
       - mlflow
