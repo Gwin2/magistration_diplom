@@ -237,8 +237,8 @@ LAYER_RULES: dict[LayerType, LayerConstraints] = {
         ],
     ),
     LayerType.VIT_BLOCK: LayerConstraints(
-        allowed_predecessors=[LayerType.LAYER_NORM, LayerType.EMBEDDING],
-        allowed_successors=[LayerType.LAYER_NORM, LayerType.LINEAR],
+        allowed_predecessors=[LayerType.VIT_BLOCK, LayerType.LAYER_NORM, LayerType.EMBEDDING],
+        allowed_successors=[LayerType.VIT_BLOCK, LayerType.LAYER_NORM, LayerType.LINEAR],
         recommended_position="middle",
         description="Vision Transformer block with self-attention and MLP.",
         efficiency_tips=[
@@ -601,16 +601,16 @@ EFFICIENCY_TIPS: dict[str, list[str]] = {
 
 def validate_layer_sequence(layers: list[dict[str, Any]]) -> tuple[bool, list[str]]:
     """Validate a sequence of layers given as dictionaries.
-    
+
     Args:
         layers: List of layer configurations with 'type' and 'params' keys.
-        
+
     Returns:
         Tuple of (is_valid, list_of_issues).
     """
-    validator = ArchitectureValidator()
+    ArchitectureValidator()
     issues = []
-    
+
     for i, layer_config in enumerate(layers):
         layer_type_str = layer_config.get("type", "")
         try:
@@ -618,32 +618,35 @@ def validate_layer_sequence(layers: list[dict[str, Any]]) -> tuple[bool, list[st
         except ValueError:
             issues.append(f"Layer {i}: Unknown layer type '{layer_type_str}'")
             continue
-        
+
         params = layer_config.get("params", {})
-        node = LayerNode(
+        LayerNode(
             id=f"layer_{i}",
             layer_type=layer_type,
             params=params,
             position=i,
         )
-        
+
         if i > 0:
             prev_layer_type = LayerType(layers[i - 1]["type"])
             constraints = LAYER_RULES[layer_type]
-            if constraints.allowed_predecessors and prev_layer_type not in constraints.allowed_predecessors:
-                issues.append(
-                    f"Layer {i} ({layer_type.value}): {prev_layer_type.value} is not recommended before {layer_type.value}"
+            allowed = constraints.allowed_predecessors
+            if allowed and prev_layer_type not in allowed:
+                msg = (
+                    f"Layer {i} ({layer_type.value}): "
+                    f"{prev_layer_type.value} is not recommended before {layer_type.value}"
                 )
-    
+                issues.append(msg)
+
     return len(issues) == 0, issues
 
 
 def get_compatibility_issues(layers: list[dict[str, Any]]) -> list[str]:
     """Get compatibility issues for a layer sequence.
-    
+
     Args:
         layers: List of layer configurations.
-        
+
     Returns:
         List of compatibility issue descriptions.
     """
@@ -653,26 +656,26 @@ def get_compatibility_issues(layers: list[dict[str, Any]]) -> list[str]:
 
 def build_model_from_layers(layers: list[dict[str, Any]]) -> Any:
     """Build a PyTorch model from layer configurations.
-    
+
     Args:
         layers: List of layer configurations.
-        
+
     Returns:
         A PyTorch nn.Sequential model.
     """
     import torch.nn as nn
-    
+
     pytorch_layers = []
-    
+
     for layer_config in layers:
         layer_type_str = layer_config.get("type", "")
         params = layer_config.get("params", {})
-        
+
         try:
             layer_type = LayerType(layer_type_str)
         except ValueError:
             continue
-        
+
         if layer_type == LayerType.CONV2D:
             pytorch_layers.append(
                 nn.Conv2d(
@@ -723,13 +726,13 @@ def build_model_from_layers(layers: list[dict[str, Any]]) -> Any:
         elif layer_type == LayerType.ATTENTION:
             # Simplified attention placeholder
             pytorch_layers.append(nn.Identity())
-    
+
     return nn.Sequential(*pytorch_layers)
 
 
 def get_architecture_examples() -> dict[str, list[dict[str, Any]]]:
     """Return example architectures.
-    
+
     Returns:
         Dictionary of example name to layer configuration list.
     """
