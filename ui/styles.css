@@ -1463,8 +1463,9 @@ textarea:focus {
 
 .constructor-grid {
   display: grid;
-  grid-template-columns: minmax(300px, 0.85fr) minmax(0, 1.15fr);
+  grid-template-columns: minmax(260px, 360px) minmax(480px, 1fr) minmax(240px, 360px);
   gap: 12px;
+  align-items: start;
 }
 
 .constructor-side,
@@ -1535,7 +1536,7 @@ textarea:focus {
 
 .constructor-playground {
   display: grid;
-  grid-template-columns: minmax(250px, 0.9fr) minmax(0, 1.1fr);
+  grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.1fr);
   gap: 12px;
 }
 
@@ -1665,6 +1666,71 @@ textarea:focus {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.constructor-preview-panel {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: calc(var(--chip-radius) - 2px);
+  border: 1px solid var(--chip-border);
+  background: color-mix(in srgb, var(--chip-bg) 92%, transparent);
+}
+
+.constructor-visual {
+  height: 220px;
+  min-height: 160px;
+  width: 100%;
+  border-radius: 10px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel-highlight) 6%, transparent), transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  padding: 12px;
+}
+
+.constructor-monitor {
+  padding: 12px;
+}
+
+.constructor-monitor-shell {
+  display: grid;
+  gap: 10px;
+}
+
+.monitor-info {
+  display: grid;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.monitor-info strong {
+  color: var(--text);
+  display: block;
+}
+
+.monitor-metrics {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.monitor-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-start;
+}
+
+.constructor-visual svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.layer-card.highlight {
+  box-shadow: 0 12px 28px rgba(75, 140, 255, 0.12);
+  transform: translateY(-4px);
+  border-color: var(--panel-border-strong);
 }
 
 .stack-panel {
@@ -2300,9 +2366,19 @@ body.is-panel-dragging .panel-drag-handle {
     grid-template-columns: 1fr;
   }
 
-  .constructor-grid,
-  .constructor-playground,
+  .constructor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .constructor-playground {
+    grid-template-columns: 1fr;
+  }
+
   .constructor-stack-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .layer-catalog-play {
     grid-template-columns: 1fr;
   }
 
@@ -2353,6 +2429,14 @@ body.is-panel-dragging .panel-drag-handle {
     grid-template-columns: 1fr;
   }
 
+  .constructor-side {
+    min-width: 0;
+  }
+
+  .constructor-main {
+    min-width: 0;
+  }
+
   .toolbar-inline {
     justify-content: flex-start;
   }
@@ -2396,6 +2480,19 @@ body.is-panel-dragging .panel-drag-handle {
   .theme-switch,
   .layer-catalog-play {
     grid-template-columns: 1fr;
+  }
+
+  .constructor-grid,
+  .constructor-playground {
+    grid-template-columns: 1fr;
+  }
+
+  .constructor-side {
+    min-width: 0;
+  }
+
+  .constructor-main {
+    min-width: 0;
   }
 
   .hero-actions {

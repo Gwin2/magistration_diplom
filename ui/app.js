@@ -1100,6 +1100,101 @@ function renderConstructorSummary() {
   container.innerHTML = cards.join("") || '<div class="empty-state">No constructor guidance yet.</div>';
 }
 
+function renderConstructorVisual() {
+  const container = document.getElementById("constructor-visual-preview");
+  if (!container) return;
+  const blueprint = uiState.constructorBlueprint || makeDefaultConstructorBlueprint();
+  const heads = ["classifier", "bbox"];
+  const layerMap = getConstructorLayerMap();
+  const layersByHead = heads.map((h) => blueprint.head_specs?.[h] || []);
+  const maxLen = Math.max(...layersByHead.map((l) => l.length), 1);
+  const rectW = 140;
+  const rectH = 40;
+  const gap = 12;
+  const laneW = rectW + 24;
+  const width = heads.length * laneW + 80;
+  const height = Math.max(120, maxLen * (rectH + gap) + 80);
+  const svg = [];
+  svg.push(`<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Architecture preview">`);
+  heads.forEach((head, i) => {
+    const x = 40 + i * laneW;
+    const y = 28;
+    svg.push(`<g class="head-lane" data-head="${escapeHtml(head)}">`);
+    svg.push(`<rect x="${x - 10}" y="${y - 18}" width="${rectW + 20}" height="${height - 56}" rx="12" fill="var(--chip-bg)" stroke="var(--chip-border)"/>`);
+    svg.push(`<text x="${x + rectW / 2}" y="${y - 4}" text-anchor="middle" font-size="12" fill="var(--muted)">${escapeHtml(getConstructorHeadLabel(head))}</text>`);
+    (layersByHead[i] || []).forEach((layer, idx) => {
+      const yPos = y + idx * (rectH + gap);
+      const schema = layerMap.get(layer.type) || { label: layer.type };
+      const label = escapeHtml(schema.label || layer.type);
+      svg.push(`<g class="preview-layer" data-head="${escapeHtml(head)}" data-index="${idx}" transform="translate(${x},${yPos})" style="cursor:pointer">`);
+      svg.push(`<rect width="${rectW}" height="${rectH}" rx="8" fill="var(--panel)" stroke="var(--panel-border)"/>`);
+      svg.push(`<text x="${rectW / 2}" y="${rectH / 2 + 5}" text-anchor="middle" font-size="12" fill="var(--text)">${label}</text>`);
+      svg.push(`</g>`);
+    });
+    svg.push(`</g>`);
+  });
+  svg.push(`</svg>`);
+  container.innerHTML = svg.join("");
+  // attach click handlers to scroll corresponding layer card into view
+  container.querySelectorAll(".preview-layer").forEach((node) => {
+    node.addEventListener("click", () => {
+      const head = node.dataset.head;
+      const index = Number(node.dataset.index);
+      const card = document.querySelector(`[data-stack-layer][data-head-name="${head}"][data-layer-index="${index}"]`);
+      if (card) {
+        card.scrollIntoView({ behavior: "smooth", block: "center" });
+        card.classList.add("highlight");
+        setTimeout(() => card.classList.remove("highlight"), 1400);
+      }
+    });
+  });
+}
+
+function renderConstructorMonitor() {
+  const info = document.getElementById("constructor-monitor-info");
+  const metrics = document.getElementById("constructor-monitor-metrics");
+  if (!info || !metrics) return;
+  const blueprint = uiState.constructorBlueprint || makeDefaultConstructorBlueprint();
+  const classifierCount = (blueprint.head_specs?.classifier || []).length || 0;
+  const bboxCount = (blueprint.head_specs?.bbox || []).length || 0;
+  info.innerHTML = `
+    <div><strong>Name</strong><div>${escapeHtml(blueprint.name || "custom_detector_builder")}</div></div>
+    <div><strong>Base model</strong><div>${escapeHtml(blueprint.base_model || "n/a")}</div></div>
+    <div><strong>Checkpoint</strong><div>${escapeHtml(blueprint.checkpoint || "n/a")}</div></div>
+    <div><strong>Goal</strong><div>${escapeHtml(blueprint.goal || "balanced")}</div></div>
+    <div><strong>Labels</strong><div>${escapeHtml((blueprint.labels || []).join(", ") || "-")}</div></div>
+    <div><strong>Layers</strong><div>Classifier: ${classifierCount} • BBox: ${bboxCount}</div></div>
+  `;
+  metrics.innerHTML = `
+    <span class="chip">Blocks: ${classifierCount + bboxCount}</span>
+    <span class="chip">Classifier: ${classifierCount}</span>
+    <span class="chip">BBox: ${bboxCount}</span>
+  `;
+
+  // wire actions
+  const editBtn = document.getElementById("constructor-edit-open");
+  const exportBtn = document.getElementById("constructor-export-blueprint");
+  if (editBtn) {
+    editBtn.onclick = () => {
+      const target = document.getElementById("architecture-name");
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        target.focus();
+      }
+    };
+  }
+  if (exportBtn) {
+    exportBtn.onclick = async () => {
+      try {
+        await copyText(JSON.stringify(blueprint, null, 2));
+        setHint("constructor-status", "Blueprint copied to clipboard.", "ok");
+      } catch {
+        setHint("constructor-status", "Clipboard access unavailable.", "error");
+      }
+    };
+  }
+}
+
 function renderConstructorLayerCatalog() {
   const container = document.getElementById("constructor-layer-catalog");
   if (!container) return;
@@ -1203,6 +1298,8 @@ function renderConstructorBuilder() {
   renderConstructorStack("classifier");
   renderConstructorStack("bbox");
   renderConstructorSummary();
+  renderConstructorVisual();
+  renderConstructorMonitor();
 }
 
 function renderExperiments() {

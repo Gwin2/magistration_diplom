@@ -1,0 +1,27 @@
+[
+  {
+    "id": "train_1775722497263",
+    "kind": "train",
+    "status": "failed",
+    "command": [
+      "/usr/local/bin/python3.11",
+      "-m",
+      "uav_vit.cli",
+      "train",
+      "--config",
+      "/app/workspace_state/generated_configs/train_1775722497263.yaml"
+    ],
+    "config_path": "workspace_state/generated_configs/train_1775722497263.yaml",
+    "experiment_name": "new_experiment",
+    "run_name": "new_experiment",
+    "output_dir": "runs/new_experiment",
+    "generated_config_path": "workspace_state/generated_configs/train_1775722497263.yaml",
+    "split": null,
+    "pid": 147,
+    "log_path": "workspace_state/logs/train_1775722497263.log",
+    "created_at": "2026-04-09T08:14:57.294541Z",
+    "started_at": "2026-04-09T08:14:57.293327Z",
+    "finished_at": "2026-04-09T08:15:38.879407Z",
+    "exit_code": 1
+  }
+]
