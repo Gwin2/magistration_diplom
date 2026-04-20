@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import shutil
 from contextlib import asynccontextmanager, suppress
 from typing import Annotated, Any
@@ -16,6 +17,7 @@ from uav_vit.control.architecture_constructor import (
     list_constructor_catalog,
     recommend_blueprint,
 )
+from uav_vit.control.exceptions import handle_workspace_errors
 from uav_vit.control.mlops import MlflowBridge, TensorBoardManager, TorchServeBridge
 from uav_vit.control.state import ControlStateStore, slugify
 from uav_vit.control.workspace import WorkspaceService
@@ -185,11 +187,9 @@ def create_app() -> FastAPI:
         }
 
     @app.get("/datasets/{dataset_id}/download")
+    @handle_workspace_errors
     def download_dataset(dataset_id: str) -> FileResponse:
-        try:
-            archive_path = store.create_dataset_archive(dataset_id)
-        except FileNotFoundError as exc:
-            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        archive_path = store.create_dataset_archive(dataset_id)
         return FileResponse(
             path=archive_path, filename=archive_path.name, media_type="application/zip"
         )
@@ -199,11 +199,9 @@ def create_app() -> FastAPI:
         return {"items": workspace.list_configs()}
 
     @app.get("/configs/{config_name}")
+    @handle_workspace_errors
     def get_config(config_name: str) -> dict[str, Any]:
-        try:
-            config = workspace.load_config(config_name)
-        except FileNotFoundError as exc:
-            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        config = workspace.load_config(config_name)
         return {
             "name": config_name,
             "config": config,
@@ -292,19 +290,15 @@ def create_app() -> FastAPI:
         return {"job": job.to_dict()}
 
     @app.post("/jobs/{job_id}/stop")
+    @handle_workspace_errors
     def stop_job(job_id: str) -> dict[str, Any]:
-        try:
-            job = workspace.stop_job(job_id)
-        except FileNotFoundError as exc:
-            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        job = workspace.stop_job(job_id)
         return {"job": job.to_dict()}
 
     @app.get("/jobs/{job_id}/logs", response_class=PlainTextResponse)
+    @handle_workspace_errors
     def job_logs(job_id: str, tail_lines: int = Query(default=160, ge=10, le=5000)) -> str:
-        try:
-            return workspace.read_job_logs(job_id, tail_lines=tail_lines)
-        except FileNotFoundError as exc:
-            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return workspace.read_job_logs(job_id, tail_lines=tail_lines)
 
     @app.get("/experiments")
     def list_experiments(
@@ -386,27 +380,21 @@ def create_app() -> FastAPI:
         return {"available": True, **payload}
 
     @app.post("/torchserve/register")
+    @handle_workspace_errors
     def register_torchserve_model(payload: TorchServeRegisterPayload) -> dict[str, Any]:
-        try:
-            result = torchserve.register_model(
-                model_name=payload.registered_name,
-                archive_file=payload.archive_file,
-                initial_workers=payload.initial_workers,
-                synchronous=payload.synchronous,
-            )
-        except RuntimeError as exc:
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
-        return result
+        return torchserve.register_model(
+            model_name=payload.registered_name,
+            archive_file=payload.archive_file,
+            initial_workers=payload.initial_workers,
+            synchronous=payload.synchronous,
+        )
 
     @app.delete("/torchserve/models/{model_name}")
+    @handle_workspace_errors
     def unregister_torchserve_model(
         registered_model_name: Annotated[str, Path(alias="model_name")],
     ) -> dict[str, Any]:
-        try:
-            result = torchserve.unregister_model(registered_model_name)
-        except RuntimeError as exc:
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
-        return result
+        return torchserve.unregister_model(registered_model_name)
 
     @app.post("/torchserve/predict")
     async def torchserve_predict(
@@ -415,14 +403,11 @@ def create_app() -> FastAPI:
     ) -> Any:
         payload = await file.read()
         content_type = file.content_type or "application/octet-stream"
-        try:
-            return torchserve.predict(
-                model_name=inference_model_name,
-                payload=payload,
-                content_type=content_type,
-            )
-        except RuntimeError as exc:
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return torchserve.predict(
+            model_name=inference_model_name,
+            payload=payload,
+            content_type=content_type,
+        )
 
     return app
 
@@ -461,6 +446,8 @@ def _resolve_launch_config(
         try:
             return workspace.load_config(payload.config_name)
         except FileNotFoundError as exc:
+            logger = logging.getLogger(__name__)
+            logger.warning("Config not found: %s", exc)
             raise HTTPException(status_code=404, detail=str(exc)) from exc
     raise HTTPException(
         status_code=400, detail="Either config_name or config_yaml must be provided."

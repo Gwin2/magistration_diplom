@@ -51,7 +51,9 @@ def mlflow_run(config: dict[str, Any], phase: str) -> Iterator[Any | None]:
 
     mlflow = _import_mlflow()
     if mlflow is None:
-        logger.warning("[mlflow] MLflow is enabled but package is not installed. Logging is skipped.")
+        logger.warning(
+            "[mlflow] MLflow is enabled but package is not installed. Logging is skipped."
+        )
         yield None
         return
 
