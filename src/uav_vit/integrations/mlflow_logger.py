@@ -6,6 +6,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+from uav_vit.utils import optional_import
+
 
 def _flatten_dict(data: dict[str, Any], parent_key: str = "") -> dict[str, Any]:
     output: dict[str, Any] = {}
@@ -31,11 +33,11 @@ def _is_enabled(config: dict[str, Any]) -> bool:
 
 
 def _import_mlflow() -> Any | None:
-    try:
-        import mlflow
-    except ImportError:
-        return None
-    return mlflow
+    """Import mlflow optionally.
+
+    Deprecated: Use uav_vit.utils.optional_import instead.
+    """
+    return optional_import("mlflow")
 
 
 @contextmanager

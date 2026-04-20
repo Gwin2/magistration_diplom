@@ -5,13 +5,15 @@ import socket
 from dataclasses import dataclass
 from typing import Any
 
+from uav_vit.utils import optional_import
+
 
 def _import_prometheus_client() -> Any | None:
-    try:
-        import prometheus_client  # type: ignore[import-not-found]
-    except ImportError:
-        return None
-    return prometheus_client
+    """Import prometheus_client optionally.
+
+    Deprecated: Use uav_vit.utils.optional_import instead.
+    """
+    return optional_import("prometheus_client")
 
 
 @dataclass
