@@ -43,6 +43,7 @@ def require_optional(module_name: str, feature_name: str | None = None) -> Calla
     Returns:
         Decorated function that checks for the dependency before execution.
     """
+
     def decorator(func: T) -> T:
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -54,7 +55,9 @@ def require_optional(module_name: str, feature_name: str | None = None) -> Calla
                     f"Install it with: pip install {module_name}"
                 )
             return func(*args, **kwargs)
+
         return wrapper  # type: ignore[return-value]
+
     return decorator
 
 

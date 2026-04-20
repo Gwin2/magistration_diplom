@@ -23,15 +23,11 @@ class ExperimentConfig(BaseModel):
 class PathsConfig(BaseModel):
     """Path configuration for datasets and artifacts."""
 
-    train_annotations: str | Path | None = Field(
-        default=None, description="Train annotations path"
-    )
+    train_annotations: str | Path | None = Field(default=None, description="Train annotations path")
     val_annotations: str | Path | None = Field(
         default=None, description="Validation annotations path"
     )
-    test_annotations: str | Path | None = Field(
-        default=None, description="Test annotations path"
-    )
+    test_annotations: str | Path | None = Field(default=None, description="Test annotations path")
     images_dir: str | Path | None = Field(default=None, description="Images directory")
     checkpoint_dir: str | Path = Field(default="checkpoints", description="Checkpoint directory")
     artifact_dir: str | Path = Field(default="artifacts", description="Artifacts directory")
