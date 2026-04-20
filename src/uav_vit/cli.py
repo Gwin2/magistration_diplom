@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
 from uav_vit.config import load_yaml
+from uav_vit.logging_config import get_logger, setup_root_logger
+
+logger = get_logger(__name__)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -66,10 +70,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _print_json(payload: dict[str, Any]) -> None:
-    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    logger.info(json.dumps(payload, ensure_ascii=False, indent=2))
 
 
 def main() -> None:
+    setup_root_logger()
     parser = build_parser()
     args = parser.parse_args()
 

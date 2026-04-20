@@ -6,7 +6,10 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+from uav_vit.logging_config import get_logger
 from uav_vit.utils import optional_import
+
+logger = get_logger(__name__)
 
 
 def _flatten_dict(data: dict[str, Any], parent_key: str = "") -> dict[str, Any]:
@@ -48,7 +51,7 @@ def mlflow_run(config: dict[str, Any], phase: str) -> Iterator[Any | None]:
 
     mlflow = _import_mlflow()
     if mlflow is None:
-        print("[mlflow] MLflow is enabled but package is not installed. Logging is skipped.")
+        logger.warning("[mlflow] MLflow is enabled but package is not installed. Logging is skipped.")
         yield None
         return
 
@@ -80,7 +83,7 @@ def mlflow_run(config: dict[str, Any], phase: str) -> Iterator[Any | None]:
         try:
             mlflow.log_params(params)
         except Exception as exc:
-            print(f"[mlflow] Failed to log params: {exc}")
+            logger.warning(f"[mlflow] Failed to log params: {exc}")
         yield mlflow
     except Exception:
         mlflow.end_run(status="FAILED")

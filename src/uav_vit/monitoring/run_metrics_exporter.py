@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
+
+from uav_vit.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -121,7 +126,7 @@ def main() -> None:
     args.runs_dir.mkdir(parents=True, exist_ok=True)
     gauges = _create_gauges(Gauge)
     start_http_server(args.port)
-    print(f"[exporter] Serving /metrics on 0.0.0.0:{args.port}, runs_dir={args.runs_dir}")
+    logger.info(f"[exporter] Serving /metrics on 0.0.0.0:{args.port}, runs_dir={args.runs_dir}")
 
     while True:
         export_runs(args.runs_dir, gauges)

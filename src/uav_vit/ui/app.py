@@ -1,17 +1,15 @@
-#!/usr/bin/env python3
-"""
-UI приложение для конструктора архитектур нейронных сетей.
-Запуск: python -m uav_vit.ui.app --port 7860
-"""
+from __future__ import annotations
 
 import argparse
 import json
+import logging
 
 try:
     import gradio as gr
 except ImportError as err:
     raise ImportError("Gradio не установлен. Установите его: pip install gradio") from err
 
+from uav_vit.logging_config import get_logger
 from uav_vit.ui.builder import (
     EFFICIENCY_TIPS,
     LAYER_INFO,
@@ -21,6 +19,8 @@ from uav_vit.ui.builder import (
     get_compatibility_issues,
     validate_layer_sequence,
 )
+
+logger = get_logger(__name__)
 
 
 def format_layer_info(layer_type: str) -> str:
@@ -280,7 +280,7 @@ def main():
     args = parser.parse_args()
 
     app = create_ui()
-    print(f"🚀 Запуск UI на порту {args.port}...")
+    logger.info(f"🚀 Запуск UI на порту {args.port}...")
     app.launch(server_port=args.port, server_name=args.server_name, share=args.share)
 
 
