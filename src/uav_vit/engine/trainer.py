@@ -21,9 +21,12 @@ from uav_vit.integrations import (
     mlflow_run,
     tensorboard_writer,
 )
+from uav_vit.logging_config import get_logger
 from uav_vit.models import build_model
 from uav_vit.monitoring import PrometheusPusher, build_push_config
 from uav_vit.utils.seed import set_seed
+
+logger = get_logger(__name__)
 
 
 def _select_device(device_name: str) -> torch.device:
@@ -71,9 +74,9 @@ def load_checkpoint(
     state_dict = payload.get("model_state_dict", payload)
     missing, unexpected = model.load_state_dict(state_dict, strict=False)
     if missing:
-        print(f"[checkpoint] Missing keys: {len(missing)}")
+        logger.info(f"[checkpoint] Missing keys: {len(missing)}")
     if unexpected:
-        print(f"[checkpoint] Unexpected keys: {len(unexpected)}")
+        logger.info(f"[checkpoint] Unexpected keys: {len(unexpected)}")
     return payload
 
 
@@ -192,7 +195,7 @@ def train_from_config(config: dict[str, Any]) -> dict[str, Any]:
                     progress.set_postfix({"loss": f"{loss.item():.4f}"})
 
                     if step % int(config["train"].get("log_interval", 20)) == 0:
-                        print(f"[train] epoch={epoch} step={step} loss={loss.item():.4f}")
+                        logger.info(f"[train] epoch={epoch} step={step} loss={loss.item():.4f}")
 
                 train_loss = running_loss / max(num_steps, 1)
                 val_metrics = evaluate_model(
@@ -258,7 +261,7 @@ def train_from_config(config: dict[str, Any]) -> dict[str, Any]:
                     best_metric = current_metric
                     torch.save(payload, output_dir / "best.pt")
 
-                print(
+                logger.info(
                     f"[val] epoch={epoch} map={row['map']:.4f} map50={row['map_50']:.4f} "
                     f"latency_ms={row['latency_ms']:.2f} fps={row['fps']:.2f}"
                 )

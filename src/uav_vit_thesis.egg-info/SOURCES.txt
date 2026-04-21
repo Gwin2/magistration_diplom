@@ -5,6 +5,7 @@ src/custom_models/my_detector.py
 src/uav_vit/__init__.py
 src/uav_vit/cli.py
 src/uav_vit/config.py
+src/uav_vit/config_schemas.py
 src/uav_vit/analysis/__init__.py
 src/uav_vit/analysis/condition_eval.py
 src/uav_vit/analysis/summarize.py
@@ -31,7 +32,11 @@ src/uav_vit/monitoring/prometheus_push.py
 src/uav_vit/monitoring/run_metrics_exporter.py
 src/uav_vit/serving/__init__.py
 src/uav_vit/serving/torchserve_handler.py
+src/uav_vit/ui/__init__.py
+src/uav_vit/ui/app.py
+src/uav_vit/ui/builder.py
 src/uav_vit/utils/__init__.py
+src/uav_vit/utils/imports.py
 src/uav_vit/utils/seed.py
 src/uav_vit_thesis.egg-info/PKG-INFO
 src/uav_vit_thesis.egg-info/SOURCES.txt
