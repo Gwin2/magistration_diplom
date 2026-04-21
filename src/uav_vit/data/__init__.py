@@ -17,7 +17,7 @@ __all__ = [
 ]
 
 try:
-    from uav_vit.data.dataset import CocoDetectionDataset, collate_fn
+    from uav_vit.data.dataset import CocoDetectionDataset, collate_fn  # noqa: F401
 
     __all__.extend(["CocoDetectionDataset", "collate_fn"])
 except ImportError:
