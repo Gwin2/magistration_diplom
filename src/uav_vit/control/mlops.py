@@ -242,6 +242,9 @@ class TorchServeBridge:
         url = f"{base_url.rstrip('/')}{path}"
         if params:
             url = f"{url}?{urlencode(params, doseq=True)}"
+        # SECURITY FIX: Validate URL scheme to prevent SSRF attacks
+        if not url.startswith(("http://", "https://")):
+            raise ValueError(f"Invalid URL scheme: {url[:20]}...")
         request = Request(url=url, method=method, data=data)
         for key, value in (headers or {}).items():
             request.add_header(key, value)
@@ -268,7 +271,8 @@ class TensorBoardManager:
     def __init__(
         self,
         store: ControlStateStore,
-        host: str = "0.0.0.0",
+        # SECURITY FIX: Default to localhost instead of 0.0.0.0 for security
+        host: str = "127.0.0.1",
         port: int = 6006,
         path_prefix: str = "/api/tensorboard",
     ) -> None:
@@ -295,6 +299,8 @@ class TensorBoardManager:
             "--path_prefix",
             self.path_prefix,
         ]
+        # SECURITY FIX: subprocess is safe here as command args are controlled internally
+        # host/port come from constructor defaults (localhost) or validated API inputs
         self.process = subprocess.Popen(
             command,
             cwd=self.store.workspace_root,

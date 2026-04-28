@@ -50,7 +50,8 @@ class UAVObjectDetectionHandler(BaseHandler):
         self.model = bundle.model
         self.image_processor = bundle.image_processor
 
-        payload = torch.load(checkpoint_path, map_location=self.device)
+        # SECURITY FIX: Use weights_only=True to prevent arbitrary code execution
+        payload = torch.load(checkpoint_path, map_location=self.device, weights_only=True)
         state_dict = payload.get("model_state_dict", payload)
         self.model.load_state_dict(state_dict, strict=False)
         self.model.to(self.device)
