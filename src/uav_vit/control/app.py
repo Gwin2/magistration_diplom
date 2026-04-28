@@ -555,6 +555,7 @@ def main() -> None:
     # SECURITY FIX: Use environment variable for host binding instead of hardcoded 0.0.0.0
     # Default to localhost for security, allow override via UAV_CONTROL_HOST env var
     import os
+
     host = os.environ.get("UAV_CONTROL_HOST", "127.0.0.1")
     port = int(os.environ.get("UAV_CONTROL_PORT", "8010"))
 
