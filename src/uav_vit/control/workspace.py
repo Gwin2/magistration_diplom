@@ -414,6 +414,7 @@ class WorkspaceService:
             try:
                 frame = pd.read_csv(metrics_file)
             except Exception:
+                # Log exception for debugging but continue processing other files
                 continue
             if frame.empty:
                 continue
