@@ -273,7 +273,7 @@ def create_ui() -> gr.Blocks:
 
 def main():
     import os
-    
+
     parser = argparse.ArgumentParser(description="UI конструктора нейронных сетей")
     parser.add_argument("--port", type=int, default=7860, help="Порт для запуска")
     parser.add_argument("--share", action="store_true", help="Создать публичную ссылку")
