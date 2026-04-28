@@ -38,18 +38,21 @@ def _build_hf_model(config: dict[str, Any], default_checkpoint: str) -> ModelBun
 
     model_cfg = config["model"]
     checkpoint = model_cfg.get("checkpoint") or default_checkpoint
+    # SECURITY FIX: Allow specifying exact revision to prevent supply chain attacks
+    revision = model_cfg.get("revision")  # Optional: specify exact model version
     num_labels = int(model_cfg["num_labels"])
     id2label = {int(key): value for key, value in model_cfg["id2label"].items()}
     label2id = {str(key): int(value) for key, value in model_cfg["label2id"].items()}
 
     model = AutoModelForObjectDetection.from_pretrained(
         checkpoint,
+        revision=revision,
         ignore_mismatched_sizes=True,
         num_labels=num_labels,
         id2label=id2label,
         label2id=label2id,
     )
-    image_processor = AutoImageProcessor.from_pretrained(checkpoint)
+    image_processor = AutoImageProcessor.from_pretrained(checkpoint, revision=revision)
     return ModelBundle(model=model, image_processor=image_processor, name=model_cfg["name"])
 
 

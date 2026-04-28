@@ -272,10 +272,15 @@ def create_ui() -> gr.Blocks:
 
 
 def main():
+    import os
+    
     parser = argparse.ArgumentParser(description="UI конструктора нейронных сетей")
     parser.add_argument("--port", type=int, default=7860, help="Порт для запуска")
     parser.add_argument("--share", action="store_true", help="Создать публичную ссылку")
-    parser.add_argument("--server-name", type=str, default="0.0.0.0", help="Имя сервера")
+    # SECURITY FIX: Default to localhost instead of 0.0.0.0 for security
+    # Allow override via UAV_UI_HOST env var or --server-name argument
+    default_host = os.environ.get("UAV_UI_HOST", "127.0.0.1")
+    parser.add_argument("--server-name", type=str, default=default_host, help="Имя сервера")
     args = parser.parse_args()
 
     app = create_ui()

@@ -70,7 +70,9 @@ def _create_dataloader(
 def load_checkpoint(
     model: torch.nn.Module, checkpoint_path: str | Path, device: torch.device
 ) -> dict[str, Any]:
-    payload = torch.load(checkpoint_path, map_location=device)
+    # SECURITY FIX: Use weights_only=True to prevent arbitrary code execution
+    # This restricts loading to only tensor data, not arbitrary Python objects
+    payload = torch.load(checkpoint_path, map_location=device, weights_only=True)
     state_dict = payload.get("model_state_dict", payload)
     missing, unexpected = model.load_state_dict(state_dict, strict=False)
     if missing:
