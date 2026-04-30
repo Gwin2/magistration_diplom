@@ -63,10 +63,12 @@ const uiStorageKeys = {
   motion: "uav_ui_motion",
   density: "uav_ui_density",
   layout: "uav_ui_panel_layouts",
+  layoutEdit: "uav_ui_layout_edit",
 };
 
 const allowedThemes = new Set(["flight", "horizon", "paper", "signal"]);
 const allowedDensity = new Set(["compact", "comfortable"]);
+const panelSpanOptions = [4, 6, 8, 12];
 const metricHistory = {};
 Object.keys(metricQueries).forEach((key) => {
   metricHistory[key] = Array.from({ length: 18 }, () => metricFallback[key]);
@@ -669,6 +671,15 @@ function writePanelLayoutState(layouts) {
   safeWriteStorage(uiStorageKeys.layout, JSON.stringify(layouts));
 }
 
+function getPaneLayoutConfig(layouts, paneId) {
+  const saved = layouts?.[paneId];
+  if (Array.isArray(saved)) return { order: saved, spans: {} };
+  return {
+    order: Array.isArray(saved?.order) ? saved.order : [],
+    spans: saved?.spans && typeof saved.spans === "object" ? saved.spans : {},
+  };
+}
+
 function getPanePanels(pane) {
   return Array.from(pane?.querySelectorAll(":scope > .panel") || []);
 }
@@ -683,21 +694,58 @@ function ensurePanelLayoutId(panel, index = 0) {
   return panelId;
 }
 
+function getDefaultPanelSpan(panel) {
+  if (panel.classList.contains("span-all") || panel.classList.contains("layout-wide")) return 12;
+  if (panel.classList.contains("layout-main") || panel.classList.contains("layout-mainwide") || panel.classList.contains("layout-hero")) return 8;
+  if (panel.classList.contains("layout-side") || panel.classList.contains("layout-rail") || panel.classList.contains("layout-third")) return 4;
+  if (panel.classList.contains("layout-half")) return 6;
+  return 6;
+}
+
+function normalizePanelSpan(value, fallback = 6) {
+  const span = Number(value);
+  return panelSpanOptions.includes(span) ? span : fallback;
+}
+
+function applyPanelSpan(panel, span, persist = true) {
+  if (!panel) return;
+  const nextSpan = normalizePanelSpan(span, getDefaultPanelSpan(panel));
+  panelSpanOptions.forEach((option) => panel.classList.remove(`panel-span-${option}`));
+  panel.classList.add(`panel-span-${nextSpan}`);
+  panel.dataset.panelSpan = String(nextSpan);
+  panel.querySelectorAll(".panel-size-btn[data-panel-span]").forEach((button) => {
+    button.classList.toggle("is-active", Number(button.dataset.panelSpan) === nextSpan);
+  });
+  if (persist) persistPaneLayout(panel.closest(".tab-pane-grid"));
+}
+
 function persistPaneLayout(pane) {
   if (!pane?.id) return;
   const layouts = readPanelLayoutState();
-  layouts[pane.id] = getPanePanels(pane).map((panel, index) => ensurePanelLayoutId(panel, index));
+  const panels = getPanePanels(pane);
+  layouts[pane.id] = {
+    order: panels.map((panel, index) => ensurePanelLayoutId(panel, index)),
+    spans: Object.fromEntries(panels.map((panel, index) => [
+      ensurePanelLayoutId(panel, index),
+      normalizePanelSpan(panel.dataset.panelSpan, getDefaultPanelSpan(panel)),
+    ])),
+  };
   writePanelLayoutState(layouts);
 }
 
 function restorePaneLayout(pane) {
   if (!pane?.id) return;
   const layouts = readPanelLayoutState();
-  const savedOrder = Array.isArray(layouts[pane.id]) ? layouts[pane.id] : [];
-  if (!savedOrder.length) return;
+  const savedConfig = getPaneLayoutConfig(layouts, pane.id);
   const panels = getPanePanels(pane);
   const panelMap = new Map(panels.map((panel, index) => [ensurePanelLayoutId(panel, index), panel]));
-  const ordered = savedOrder.map((panelId) => panelMap.get(panelId)).filter(Boolean);
+  panels.forEach((panel, index) => {
+    const panelId = ensurePanelLayoutId(panel, index);
+    panel.dataset.defaultSpan = panel.dataset.defaultSpan || String(getDefaultPanelSpan(panel));
+    applyPanelSpan(panel, savedConfig.spans[panelId] || panel.dataset.defaultSpan, false);
+  });
+  if (!savedConfig.order.length) return;
+  const ordered = savedConfig.order.map((panelId) => panelMap.get(panelId)).filter(Boolean);
   panels.forEach((panel) => {
     if (!ordered.includes(panel)) ordered.push(panel);
   });
@@ -806,6 +854,19 @@ function decoratePanelTitleRow(panel) {
     event.dataTransfer.setData("text/plain", panelDragState.panelId);
   });
   handle.addEventListener("dragend", () => clearPanelDragState());
+  const sizeControl = document.createElement("div");
+  sizeControl.className = "panel-size-control";
+  panelSpanOptions.forEach((span) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "panel-size-btn";
+    button.dataset.panelSpan = String(span);
+    button.title = `${span} grid columns`;
+    button.textContent = String(span);
+    button.addEventListener("click", () => applyPanelSpan(panel, span));
+    sizeControl.appendChild(button);
+  });
+  side.appendChild(sizeControl);
   side.appendChild(handle);
   if (heading) {
     row.replaceChildren(heading, side);
@@ -840,11 +901,22 @@ function bindPanelDragEvents(panel) {
   });
 }
 
+function setLayoutEditMode(isEnabled, persist = true) {
+  document.body.classList.toggle("layout-editing", isEnabled);
+  const button = document.getElementById("layout-edit-toggle");
+  if (button) {
+    button.textContent = `Layout edit: ${isEnabled ? "on" : "off"}`;
+    button.setAttribute("aria-pressed", String(isEnabled));
+  }
+  if (persist) safeWriteStorage(uiStorageKeys.layoutEdit, isEnabled ? "on" : "off");
+}
+
 function setupPanelGridLayout() {
   const panes = Array.from(document.querySelectorAll(".tab-pane-grid"));
   panes.forEach((pane) => {
     getPanePanels(pane).forEach((panel, index) => {
       panel.dataset.defaultOrder = panel.dataset.defaultOrder || String(index);
+      panel.dataset.defaultSpan = panel.dataset.defaultSpan || String(getDefaultPanelSpan(panel));
       ensurePanelLayoutId(panel, index);
       decoratePanelTitleRow(panel);
       bindPanelDragEvents(panel);
@@ -877,10 +949,16 @@ function setupPanelGridLayout() {
     panes.forEach((pane) => {
       getPanePanels(pane)
         .sort((left, right) => Number(left.dataset.defaultOrder || 0) - Number(right.dataset.defaultOrder || 0))
-        .forEach((panel) => pane.appendChild(panel));
+        .forEach((panel) => {
+          applyPanelSpan(panel, panel.dataset.defaultSpan || getDefaultPanelSpan(panel), false);
+          pane.appendChild(panel);
+        });
     });
     clearPanelDragState();
   });
+  const editToggle = document.getElementById("layout-edit-toggle");
+  editToggle?.addEventListener("click", () => setLayoutEditMode(!document.body.classList.contains("layout-editing")));
+  setLayoutEditMode(safeReadStorage(uiStorageKeys.layoutEdit) === "on", false);
 }
 
 function resolveDashboardSrc(rawSrc) {
