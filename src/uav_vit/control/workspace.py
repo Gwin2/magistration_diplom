@@ -303,6 +303,7 @@ class WorkspaceService:
 
         log_path = self.store.logs_dir / f"{job_id}.log"
         log_handle = log_path.open("w", encoding="utf-8")
+        # SAFE: subprocess with controlled arguments - command built from trusted internal values
         process = subprocess.Popen(
             command,
             cwd=self.store.workspace_root,
