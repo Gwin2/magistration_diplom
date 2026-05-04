@@ -279,3 +279,15 @@ docker compose config
 **Лицензия**: MIT  
 **Контакты**: [ваш email]  
 **Статус**: Активная разработка
+=======
+- [Карта документации](docs/README_ru.md)
+- [Развёртывание и git-автоматизация](docs/deployment_ru.md)
+- [MLOps кластер](docs/mlops_cluster_ru.md)
+- [Grafana Web View](docs/grafana_web_view_ru.md)
+- [Mission Control UI](docs/ui_control_center_ru.md)
+- [Полный контроль ресурсов](docs/resource_control_ru.md)
+- [Расширение архитектур](docs/architecture_extension.md)
+- [Методология исследования](docs/thesis_methodology_ru.md)
+- [Полный аналитический каркас](docs/full_analysis_framework_ru.md)
+- [Шаблон результатов](docs/results_template.md)
+- [Шаблон выводов](docs/conclusions_ru_template.md)
