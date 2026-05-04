@@ -221,3 +221,5 @@ docker compose config
 - [Полный аналитический каркас](docs/full_analysis_framework_ru.md)
 - [Шаблон результатов](docs/results_template.md)
 - [Шаблон выводов](docs/conclusions_ru_template.md)
+#   C o m p u t i n g _ n a t u r a l _ l a n g u a g e  
+ 
