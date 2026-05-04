@@ -101,8 +101,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Save state
     localStorage.setItem('nn_trainer_step', step);
 
-    // Trigger resize observer check
-    checkContextLayout();
+    // Trigger resize observer check and layout validation
+    requestAnimationFrame(() => {
+      checkContextLayout();
+      validateArchitectureLayout();
+    });
   }
 
   // Get tab name from step number
@@ -224,6 +227,48 @@ document.addEventListener('DOMContentLoaded', () => {
     if (visualPreview && activePane.id === 'tab-architecture') {
       visualPreview.style.height = '';
       visualPreview.style.minHeight = '250px';
+    }
+  }
+
+  // Validate architecture layout to prevent context overlap
+  function validateArchitectureLayout() {
+    const archTab = document.getElementById('tab-architecture');
+    if (!archTab || !archTab.classList.contains('is-active')) return;
+
+    const constructorGrid = document.querySelector('.constructor-grid');
+    const monitorPanel = document.querySelector('.constructor-monitor');
+    const mainPanel = document.querySelector('.constructor-main');
+    
+    if (!constructorGrid || !monitorPanel || !mainPanel) return;
+
+    // Get computed styles
+    const gridRect = constructorGrid.getBoundingClientRect();
+    const monitorRect = monitorPanel.getBoundingClientRect();
+    const mainRect = mainPanel.getBoundingClientRect();
+
+    // Check for overlap
+    const hasOverlap = (
+      monitorRect.left < mainRect.right &&
+      monitorRect.right > mainRect.left &&
+      monitorRect.top < mainRect.bottom &&
+      monitorRect.bottom > mainRect.top
+    );
+
+    if (hasOverlap) {
+      console.warn('Architecture layout overlap detected, resetting grid');
+      constructorGrid.style.gridTemplateColumns = '';
+      setTimeout(() => {
+        constructorGrid.style.gridTemplateColumns = '1fr 2fr 1fr';
+      }, 50);
+    }
+
+    // Ensure monitor stays within bounds
+    const monitorShell = document.getElementById('constructor-monitor');
+    if (monitorShell) {
+      const shellRect = monitorShell.getBoundingClientRect();
+      if (shellRect.right > gridRect.right - 10) {
+        monitorShell.style.overflowX = 'auto';
+      }
     }
   }
 
