@@ -484,8 +484,9 @@ textarea {
 /* Constructor */
 .constructor-grid {
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: 1fr 2fr 1fr;
   gap: var(--spacing-lg);
+  align-items: start;
 }
 
 .constructor-side {
@@ -496,6 +497,23 @@ textarea {
 
 .constructor-main {
   min-height: 300px;
+}
+
+.constructor-monitor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  min-width: 0;
+}
+
+.constructor-monitor-shell {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
 }
 
 .constructor-visual {
@@ -789,6 +807,10 @@ tr:hover td {
   
   .constructor-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .constructor-monitor {
+    order: -1;
   }
 }
 
