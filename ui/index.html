@@ -3,122 +3,110 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>UAV Mission Control</title>
+    <title>Neural Network Trainer</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body data-theme="flight" data-motion="on" data-density="compact">
-    <div class="orb orb-a"></div>
-    <div class="orb orb-b"></div>
-    <div class="noise"></div>
+  <body data-theme="minimal" data-motion="on" data-density="comfortable">
+    <div class="gradient-bg"></div>
 
-    <header class="panel app-header">
-      <section class="status-card" aria-label="Service status">
-        <div class="block-head">
-          <p class="block-title">Stack Status</p>
-          <p class="block-subtitle">Control plane, observability and serving health</p>
-        </div>
-        <div class="status-meta">
-          <div class="status-meta-card">
-            <span class="status-meta-label">Online</span>
-            <strong id="status-online-count">0</strong>
-          </div>
-          <div class="status-meta-card">
-            <span class="status-meta-label">Offline</span>
-            <strong id="status-offline-count">0</strong>
-          </div>
-          <div class="status-meta-card">
-            <span class="status-meta-label">Running Jobs</span>
-            <strong id="status-running-jobs">0</strong>
-          </div>
-        </div>
-        <div class="status-grid status-grid-wide">
-          <div class="status-pill" data-service="control"><span class="dot"></span><span>Control API</span></div>
-          <div class="status-pill" data-service="mlflow"><span class="dot"></span><span>MLflow</span></div>
-          <div class="status-pill" data-service="prometheus"><span class="dot"></span><span>Prometheus</span></div>
-          <div class="status-pill" data-service="grafana"><span class="dot"></span><span>Grafana</span></div>
-          <div class="status-pill" data-service="tensorboard"><span class="dot"></span><span>TensorBoard</span></div>
-          <div class="status-pill" data-service="pushgateway"><span class="dot"></span><span>Pushgateway</span></div>
-          <div class="status-pill" data-service="torchserve"><span class="dot"></span><span>TorchServe</span></div>
-          <div class="status-pill" data-service="alertmanager"><span class="dot"></span><span>Alertmanager</span></div>
-        </div>
-      </section>
-
-      <section class="ops-card" aria-label="Quick actions">
-        <div class="block-head">
-          <p class="block-title">Quick Actions</p>
-          <p class="block-subtitle">Jump into the next operator task without scrolling</p>
-        </div>
-        <div class="quick-grid">
-          <button class="quick-action" type="button" data-jump-tab="tab-datasets">
-            <span>Dataset Intake</span>
-            <small>Upload archives, attach folders, download prepared sets.</small>
-          </button>
-          <button class="quick-action" type="button" data-jump-tab="tab-studio">
-            <span>Model Studio</span>
-            <small>Edit YAML, build custom architectures and launch runs.</small>
-          </button>
-          <button class="quick-action" type="button" data-jump-tab="tab-experiments">
-            <span>Experiment Desk</span>
-            <small>Track jobs, compare runs, review TensorBoard and notes.</small>
-          </button>
-          <button class="quick-action" type="button" data-jump-tab="tab-serving">
-            <span>Serving Gate</span>
-            <small>Manage TorchServe and reach every service through one UI.</small>
-          </button>
-        </div>
-        <div class="quick-links">
-          <a href="/api/mlflow/" target="_blank" rel="noreferrer">MLflow</a>
-          <a href="/api/grafana/" target="_blank" rel="noreferrer">Grafana</a>
-          <a href="/api/tensorboard/" target="_blank" rel="noreferrer">TensorBoard</a>
-          <a href="/api/control/health" target="_blank" rel="noreferrer">Control API</a>
-        </div>
-      </section>
-
-      <section class="appearance-card" aria-label="Appearance controls">
-        <div class="block-head block-head-inline">
-          <p class="block-title">Appearance</p>
-          <button id="menu-toggle" class="btn menu-toggle" type="button">Menu</button>
-        </div>
-        <div class="appearance-group">
-          <p class="appearance-label">Theme</p>
-          <div class="theme-switch" id="theme-switch">
-            <button class="theme-btn is-active" type="button" data-theme="flight">Flight</button>
-            <button class="theme-btn" type="button" data-theme="horizon">Horizon</button>
-            <button class="theme-btn" type="button" data-theme="paper">Paper</button>
-            <button class="theme-btn" type="button" data-theme="signal">Signal</button>
-          </div>
-        </div>
-        <div class="appearance-group">
-          <p class="appearance-label">Density</p>
-          <div class="density-switch" id="density-switch">
-            <button class="density-btn is-active" type="button" data-density="compact">Compact</button>
-            <button class="density-btn" type="button" data-density="comfortable">Comfort</button>
-          </div>
-        </div>
-        <button id="motion-toggle" class="btn btn-ghost" type="button" aria-pressed="false">Motion: on</button>
-        <button id="layout-edit-toggle" class="btn btn-ghost" type="button" aria-pressed="false">Layout edit: off</button>
-        <button id="layout-reset" class="btn btn-ghost" type="button">Reset Layout</button>
-      </section>
+    <header class="app-header">
+      <div class="header-left">
+        <h1 class="app-title">NN Trainer</h1>
+        <span class="app-subtitle">Train your custom neural network</span>
+      </div>
+      <div class="header-status" id="header-status">
+        <span class="status-dot status-ready"></span>
+        <span class="status-text">Ready</span>
+      </div>
+      <div class="header-actions">
+        <button id="theme-toggle" class="icon-btn" type="button" title="Toggle theme">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+        </button>
+        <button id="menu-toggle" class="icon-btn" type="button" title="Toggle menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+      </div>
     </header>
 
     <main class="workspace">
-      <aside class="panel nav-panel">
-        <p class="menu-title">Control Surface</p>
-        <nav class="tabs-nav" id="tabs-nav">
-          <button class="tab-btn is-active" type="button" data-tab-target="tab-overview"><span>Overview</span><small>stack snapshot + dashboards</small></button>
-          <button class="tab-btn" type="button" data-tab-target="tab-datasets"><span>Datasets</span><small>upload, register, download</small></button>
-          <button class="tab-btn" type="button" data-tab-target="tab-studio"><span>Studio</span><small>configs + model editor</small></button>
-          <button class="tab-btn" type="button" data-tab-target="tab-experiments"><span>Experiments</span><small>tracking + tensorboard + jobs</small></button>
-          <button class="tab-btn" type="button" data-tab-target="tab-serving"><span>Serving</span><small>torchserve + service access</small></button>
-          <button class="tab-btn" type="button" data-tab-target="tab-resources"><span>Resources</span><small>host, containers, governance</small></button>
+      <aside class="nav-panel" id="nav-panel">
+        <nav class="steps-nav" id="steps-nav">
+          <p class="nav-section-title">Training Pipeline</p>
+          <button class="step-btn is-active" type="button" data-step="1" data-tab-target="tab-data">
+            <span class="step-number">1</span>
+            <span class="step-info">
+              <span class="step-title">Data</span>
+              <span class="step-desc">Upload & prepare</span>
+            </span>
+          </button>
+          <button class="step-btn" type="button" data-step="2" data-tab-target="tab-architecture">
+            <span class="step-number">2</span>
+            <span class="step-info">
+              <span class="step-title">Architecture</span>
+              <span class="step-desc">Build model</span>
+            </span>
+          </button>
+          <button class="step-btn" type="button" data-step="3" data-tab-target="tab-config">
+            <span class="step-number">3</span>
+            <span class="step-info">
+              <span class="step-title">Configuration</span>
+              <span class="step-desc">Set parameters</span>
+            </span>
+          </button>
+          <button class="step-btn" type="button" data-step="4" data-tab-target="tab-train">
+            <span class="step-number">4</span>
+            <span class="step-info">
+              <span class="step-title">Training</span>
+              <span class="step-desc">Launch & monitor</span>
+            </span>
+          </button>
+          <button class="step-btn" type="button" data-step="5" data-tab-target="tab-evaluate">
+            <span class="step-number">5</span>
+            <span class="step-info">
+              <span class="step-title">Evaluation</span>
+              <span class="step-desc">Review metrics</span>
+            </span>
+          </button>
+          <button class="step-btn" type="button" data-step="6" data-tab-target="tab-deploy">
+            <span class="step-number">6</span>
+            <span class="step-info">
+              <span class="step-title">Deploy</span>
+              <span class="step-desc">Export & serve</span>
+            </span>
+          </button>
+          
+          <p class="nav-section-title">Monitoring</p>
+          <button class="step-btn" type="button" data-step="7" data-tab-target="tab-metrics">
+            <span class="step-number">7</span>
+            <span class="step-info">
+              <span class="step-title">Metrics</span>
+              <span class="step-desc">Live monitoring</span>
+            </span>
+          </button>
+          <button class="step-btn" type="button" data-step="8" data-tab-target="tab-resources">
+            <span class="step-number">8</span>
+            <span class="step-info">
+              <span class="step-title">Resources</span>
+              <span class="step-desc">System usage</span>
+            </span>
+          </button>
         </nav>
+        
+        <div class="nav-footer">
+          <button id="prev-step" class="nav-btn" type="button" disabled>← Back</button>
+          <button id="next-step" class="nav-btn nav-btn-primary" type="button">Next →</button>
+        </div>
       </aside>
 
       <section class="tab-content">
