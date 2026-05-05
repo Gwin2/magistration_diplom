@@ -274,11 +274,6 @@ docker compose config
 | [Шаблон результатов](docs/results_template.md) | Оформление экспериментов |
 | [Шаблон выводов](docs/conclusions_ru_template.md) | Формулировка выводов |
 
----
-
-**Лицензия**: MIT  
-**Контакты**: [ваш email]  
-**Статус**: Активная разработка
 =======
 - [Карта документации](docs/README_ru.md)
 - [Развёртывание и git-автоматизация](docs/deployment_ru.md)
