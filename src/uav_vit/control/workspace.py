@@ -101,12 +101,17 @@ class WorkspaceService:
 
     def list_datasets(self) -> list[dict[str, Any]]:
         metadata = self.store.load_metadata().get("datasets", {})
+        hidden_ids = {dataset_id for dataset_id, meta in metadata.items() if meta.get("hidden")}
         dataset_paths: dict[str, Path] = {}
         for dataset_dir in self.store.discover_dataset_directories():
             dataset_id = self.store.dataset_id_for_path(dataset_dir)
+            if dataset_id in hidden_ids:
+                continue
             dataset_paths[dataset_id] = dataset_dir
 
         for dataset_id, meta in metadata.items():
+            if dataset_id in hidden_ids:
+                continue
             raw_path = meta.get("path")
             if not raw_path:
                 continue
@@ -118,6 +123,8 @@ class WorkspaceService:
         for dataset_id, dataset_dir in dataset_paths.items():
             stats = self.store.file_stats(dataset_dir)
             meta = metadata.get(dataset_id, {})
+            if meta.get("hidden"):
+                continue
             rows.append(
                 {
                     "id": dataset_id,

@@ -177,9 +177,60 @@ class ControlStateStore:
                 "path": str(resolved.relative_to(self.workspace_root)),
                 "description": description,
                 "tags": sorted({tag.strip() for tag in (tags or []) if tag.strip()}),
+                "hidden": False,
                 "updated_at": utc_now(),
             },
         )
+
+    def update_dataset(
+        self,
+        dataset_id: str,
+        name: str | None = None,
+        description: str | None = None,
+        tags: list[str] | None = None,
+    ) -> dict[str, Any]:
+        dataset_path = self.get_dataset_path(dataset_id)
+        metadata = self.load_metadata().get("datasets", {})
+        if dataset_path is None and dataset_id not in metadata:
+            raise FileNotFoundError(f"Dataset '{dataset_id}' was not found.")
+
+        values: dict[str, Any] = {"hidden": False, "updated_at": utc_now()}
+        if dataset_path is not None:
+            values["path"] = str(dataset_path.relative_to(self.workspace_root))
+        if name is not None:
+            values["name"] = name
+        if description is not None:
+            values["description"] = description
+        if tags is not None:
+            values["tags"] = sorted({tag.strip() for tag in tags if tag.strip()})
+        return self.update_metadata_entry("datasets", dataset_id, values)
+
+    def unregister_dataset(self, dataset_id: str, delete_files: bool = False) -> dict[str, Any]:
+        dataset_path = self.get_dataset_path(dataset_id)
+        metadata = self.load_metadata()
+        datasets = metadata.setdefault("datasets", {})
+        if dataset_path is None and dataset_id not in datasets:
+            raise FileNotFoundError(f"Dataset '{dataset_id}' was not found.")
+
+        if delete_files:
+            if dataset_path is None:
+                raise FileNotFoundError(f"Dataset '{dataset_id}' was not found.")
+            resolved = dataset_path.resolve()
+            uploads_root = self.uploads_dir.resolve()
+            if resolved == uploads_root or uploads_root not in resolved.parents:
+                raise ValueError("Only uploaded datasets can be deleted from disk.")
+            shutil.rmtree(resolved)
+            datasets.pop(dataset_id, None)
+        else:
+            current = datasets.get(dataset_id, {})
+            if dataset_path is not None:
+                current["path"] = str(dataset_path.relative_to(self.workspace_root))
+            current["hidden"] = True
+            current["updated_at"] = utc_now()
+            datasets[dataset_id] = current
+
+        self.save_metadata(metadata)
+        return {"id": dataset_id, "delete_files": delete_files}
 
     def create_dataset_archive(self, dataset_id: str) -> Path:
         dataset_path = self.get_dataset_path(dataset_id)

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 from contextlib import asynccontextmanager, suppress
+from pathlib import Path as FilesystemPath
 from typing import Annotated, Any
 
 import uvicorn
@@ -28,6 +30,19 @@ class DatasetRegisterPayload(BaseModel):
     path: str
     description: str = ""
     tags: list[str] = Field(default_factory=list)
+
+
+class DatasetImportPayload(BaseModel):
+    dataset_name: str
+    archive_path: str
+    description: str = ""
+    tags: list[str] = Field(default_factory=list)
+
+
+class DatasetMetadataPayload(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    tags: list[str] | None = None
 
 
 class ConfigSavePayload(BaseModel):
@@ -68,6 +83,26 @@ class TorchServeRegisterPayload(BaseModel):
     archive_file: str
     initial_workers: int = 1
     synchronous: bool = True
+
+
+_FILE_PICKER_EXTENSIONS = {
+    "dataset_archive": (".zip", ".tar", ".tar.gz", ".tgz", ".gz"),
+    "image": (".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"),
+    "torchserve_archive": (".mar",),
+}
+_FILE_PICKER_SKIP_DIRS = {
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+    "workspace_state",
+}
 
 
 def create_app() -> FastAPI:
@@ -132,6 +167,14 @@ def create_app() -> FastAPI:
             "tensorboard": tensorboard.status(),
         }
 
+    @app.get("/files")
+    def list_workspace_files(
+        kind: str = Query(default="any"),
+        search: str = Query(default=""),
+        limit: int = Query(default=400, ge=1, le=1000),
+    ) -> dict[str, Any]:
+        return {"items": _list_workspace_files(store, kind=kind, search=search, limit=limit)}
+
     @app.get("/datasets")
     def list_datasets() -> dict[str, Any]:
         return {"items": workspace.list_datasets()}
@@ -146,6 +189,51 @@ def create_app() -> FastAPI:
         )
         return {"items": workspace.list_datasets()}
 
+    @app.post("/datasets/import")
+    @handle_workspace_errors
+    def import_dataset(payload: DatasetImportPayload) -> dict[str, Any]:
+        archive_path = (store.workspace_root / payload.archive_path).resolve()
+        try:
+            archive_path.relative_to(store.workspace_root)
+        except ValueError as exc:
+            raise ValueError("Archive path must be inside workspace.") from exc
+        if not archive_path.is_file():
+            raise FileNotFoundError(f"Archive '{payload.archive_path}' was not found.")
+
+        extracted = _ingest_dataset_archive(
+            store=store,
+            workspace=workspace,
+            dataset_name=payload.dataset_name,
+            archive_path=archive_path,
+            description=payload.description,
+            tags=payload.tags,
+        )
+        return {
+            "imported": True,
+            "archive_extracted": extracted,
+            "items": workspace.list_datasets(),
+        }
+
+    @app.put("/datasets/{dataset_id}")
+    @handle_workspace_errors
+    def update_dataset(dataset_id: str, payload: DatasetMetadataPayload) -> dict[str, Any]:
+        workspace.store.update_dataset(
+            dataset_id=dataset_id,
+            name=payload.name,
+            description=payload.description,
+            tags=payload.tags,
+        )
+        return {"items": workspace.list_datasets()}
+
+    @app.delete("/datasets/{dataset_id}")
+    @handle_workspace_errors
+    def unregister_dataset(
+        dataset_id: str,
+        delete_files: bool = Query(default=False),
+    ) -> dict[str, Any]:
+        removed = workspace.store.unregister_dataset(dataset_id, delete_files=delete_files)
+        return {"removed": removed, "items": workspace.list_datasets()}
+
     @app.post("/datasets/upload")
     async def upload_dataset(
         dataset_name: Annotated[str, Form(...)],
@@ -154,32 +242,23 @@ def create_app() -> FastAPI:
         tags: Annotated[str, Form()] = "",
     ) -> dict[str, Any]:
         dataset_slug = slugify(dataset_name)
-        upload_dir = store.uploads_dir / dataset_slug
-        if upload_dir.exists():
-            shutil.rmtree(upload_dir)
-        upload_dir.mkdir(parents=True, exist_ok=True)
-
         archive_name = file.filename or f"{dataset_slug}.zip"
         archive_path = store.state_dir / archive_name
         content = await file.read()
         archive_path.write_bytes(content)
 
-        extracted = False
         try:
-            shutil.unpack_archive(str(archive_path), str(upload_dir))
-            extracted = True
-        except (shutil.ReadError, ValueError):
-            (upload_dir / archive_name).write_bytes(content)
+            extracted = _ingest_dataset_archive(
+                store=store,
+                workspace=workspace,
+                dataset_name=dataset_name,
+                archive_path=archive_path,
+                description=description,
+                tags=_parse_tags(tags),
+            )
         finally:
             with suppress(OSError):
                 archive_path.unlink()
-
-        workspace.store.register_dataset(
-            name=dataset_name,
-            path=str(upload_dir.relative_to(store.workspace_root)),
-            description=description,
-            tags=_parse_tags(tags),
-        )
         return {
             "uploaded": True,
             "archive_extracted": extracted,
@@ -414,6 +493,86 @@ def create_app() -> FastAPI:
 
 def _parse_tags(raw_tags: str) -> list[str]:
     return sorted({item.strip() for item in raw_tags.split(",") if item and item.strip()})
+
+
+def _list_workspace_files(
+    store: ControlStateStore,
+    kind: str,
+    search: str = "",
+    limit: int = 400,
+) -> list[dict[str, Any]]:
+    root = store.workspace_root
+    extensions = _FILE_PICKER_EXTENSIONS.get(
+        kind,
+        tuple(extension for group in _FILE_PICKER_EXTENSIONS.values() for extension in group),
+    )
+    search_term = search.strip().lower()
+    rows: list[dict[str, Any]] = []
+
+    for directory, dirnames, filenames in os.walk(root):
+        dirnames[:] = [
+            name for name in dirnames if name not in _FILE_PICKER_SKIP_DIRS and not name.startswith(".")
+        ]
+        current = FilesystemPath(directory)
+        for filename in filenames:
+            lower_name = filename.lower()
+            if extensions and not any(lower_name.endswith(extension) for extension in extensions):
+                continue
+
+            path = current / filename
+            try:
+                relative = path.resolve().relative_to(root).as_posix()
+                stat = path.stat()
+            except OSError:
+                continue
+
+            if search_term and search_term not in relative.lower():
+                continue
+
+            rows.append(
+                {
+                    "name": filename,
+                    "path": relative,
+                    "size_bytes": stat.st_size,
+                    "updated_at": stat.st_mtime,
+                }
+            )
+            if len(rows) >= limit:
+                rows.sort(key=lambda item: (item["path"].count("/"), item["path"].lower()))
+                return rows
+
+    rows.sort(key=lambda item: (item["path"].count("/"), item["path"].lower()))
+    return rows
+
+
+def _ingest_dataset_archive(
+    store: ControlStateStore,
+    workspace: WorkspaceService,
+    dataset_name: str,
+    archive_path: Any,
+    description: str = "",
+    tags: list[str] | None = None,
+) -> bool:
+    dataset_slug = slugify(dataset_name)
+    upload_dir = store.uploads_dir / dataset_slug
+    if upload_dir.exists():
+        shutil.rmtree(upload_dir)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    extracted = False
+    try:
+        shutil.unpack_archive(str(archive_path), str(upload_dir))
+        extracted = True
+    except (shutil.ReadError, ValueError):
+        shutil.copy2(archive_path, upload_dir / archive_path.name)
+
+    workspace.store.register_dataset(
+        name=dataset_name,
+        path=str(upload_dir.relative_to(store.workspace_root)),
+        description=description,
+        tags=tags or [],
+    )
+    return extracted
 
 
 def _dataset_by_id(workspace: WorkspaceService, dataset_id: str | None) -> dict[str, Any] | None:

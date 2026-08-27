@@ -141,6 +141,51 @@ def test_dataset_upload_and_register(tmp_path: Path, monkeypatch) -> None:  # ty
         assert response.status_code == 200
         assert response.headers["content-type"] == "application/zip"
 
+        response = client.put(
+            f"/datasets/{uploaded['id']}",
+            json={
+                "name": "Uploaded Demo Renamed",
+                "description": "updated upload",
+                "tags": ["fog", "admin"],
+            },
+        )
+        assert response.status_code == 200
+        updated = next(item for item in response.json()["items"] if item["id"] == uploaded["id"])
+        assert updated["name"] == "Uploaded Demo Renamed"
+        assert "admin" in updated["tags"]
+
+        response = client.delete(f"/datasets/{uploaded['id']}")
+        assert response.status_code == 200
+        assert all(item["id"] != uploaded["id"] for item in response.json()["items"])
+
+        incoming_dir = tmp_path / "incoming"
+        incoming_dir.mkdir(parents=True, exist_ok=True)
+        import_archive = incoming_dir / "import_demo.zip"
+        with zipfile.ZipFile(import_archive, "w") as zip_file:
+            zip_file.writestr("frames/frame_002.txt", "demo")
+        image_file = incoming_dir / "frame_003.jpg"
+        image_file.write_bytes(b"jpeg")
+
+        response = client.get("/files", params={"kind": "dataset_archive"})
+        assert response.status_code == 200
+        assert any(item["path"] == "incoming/import_demo.zip" for item in response.json()["items"])
+
+        response = client.get("/files", params={"kind": "image"})
+        assert response.status_code == 200
+        assert any(item["path"] == "incoming/frame_003.jpg" for item in response.json()["items"])
+
+        response = client.post(
+            "/datasets/import",
+            json={
+                "dataset_name": "Imported Demo",
+                "archive_path": "incoming/import_demo.zip",
+                "description": "path import",
+                "tags": ["imported"],
+            },
+        )
+        assert response.status_code == 200
+        assert any(item["name"] == "Imported Demo" for item in response.json()["items"])
+
         response = client.post(
             "/datasets/register",
             json={

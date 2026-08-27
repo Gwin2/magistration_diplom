@@ -1,9 +1,9 @@
 ﻿<!doctype html>
-<html lang="en">
+<html lang="ru">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Neural Network Trainer</title>
+    <title>Конструктор нейронных сетей</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -19,303 +19,316 @@
     <header class="app-header">
       <div class="header-left">
         <h1 class="app-title">NN Trainer</h1>
-        <span class="app-subtitle">Train your custom neural network</span>
+        <span class="app-subtitle">Обучение пользовательских нейронных сетей</span>
       </div>
       <div class="header-status" id="header-status">
         <span class="status-dot status-ready"></span>
-        <span class="status-text">Ready</span>
+        <span class="status-text">Готово</span>
       </div>
       <div class="header-actions">
-        <button id="theme-toggle" class="icon-btn" type="button" title="Toggle theme">
+        <button id="theme-toggle" class="icon-btn" type="button" title="Переключить тему">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
           </svg>
         </button>
-        <button id="menu-toggle" class="icon-btn" type="button" title="Toggle menu">
+        <button id="menu-toggle" class="icon-btn" type="button" title="Открыть меню">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
           </svg>
+        </button>
+        <button id="contents-toggle" class="icon-btn contents-toggle" type="button" aria-expanded="false" aria-controls="contents-menu" title="Содержание">
+          <span aria-hidden="true">☷</span>
+          <span class="sr-only">Содержание</span>
         </button>
       </div>
     </header>
 
     <main class="workspace">
+      <aside id="contents-menu" class="contents-menu" aria-label="Содержание страницы" hidden>
+        <div class="contents-menu-head">
+          <strong>Содержание</strong>
+          <button id="contents-close" class="icon-btn" type="button" title="Закрыть содержание" aria-label="Закрыть содержание">×</button>
+        </div>
+        <div id="contents-list" class="contents-list"></div>
+      </aside>
       <aside class="nav-panel" id="nav-panel">
         <nav class="steps-nav" id="steps-nav">
-          <p class="nav-section-title">Training Pipeline</p>
-          <button class="step-btn is-active" type="button" data-step="1" data-tab-target="tab-data">
+          <p class="nav-section-title">Пайплайн обучения</p>
+          <button class="step-btn is-active" type="button" data-step="1" data-tab-target="tab-datasets">
             <span class="step-number">1</span>
             <span class="step-info">
-              <span class="step-title">Data</span>
-              <span class="step-desc">Upload & prepare</span>
+              <span class="step-title">Данные</span>
+              <span class="step-desc">Загрузка и подготовка</span>
             </span>
           </button>
-          <button class="step-btn" type="button" data-step="2" data-tab-target="tab-architecture">
+          <button class="step-btn" type="button" data-step="2" data-tab-target="tab-studio">
             <span class="step-number">2</span>
             <span class="step-info">
-              <span class="step-title">Architecture</span>
-              <span class="step-desc">Build model</span>
+              <span class="step-title">Студия модели</span>
+              <span class="step-desc">Архитектура и конфиг</span>
             </span>
           </button>
-          <button class="step-btn" type="button" data-step="3" data-tab-target="tab-config">
+          <button class="step-btn" type="button" data-step="3" data-tab-target="tab-experiments">
             <span class="step-number">3</span>
             <span class="step-info">
-              <span class="step-title">Configuration</span>
-              <span class="step-desc">Set parameters</span>
+              <span class="step-title">Эксперименты</span>
+              <span class="step-desc">Обучение и оценка</span>
             </span>
           </button>
-          <button class="step-btn" type="button" data-step="4" data-tab-target="tab-train">
+          <button class="step-btn" type="button" data-step="4" data-tab-target="tab-serving">
             <span class="step-number">4</span>
             <span class="step-info">
-              <span class="step-title">Training</span>
-              <span class="step-desc">Launch & monitor</span>
+              <span class="step-title">Публикация</span>
+              <span class="step-desc">Экспорт и сервис</span>
             </span>
           </button>
-          <button class="step-btn" type="button" data-step="5" data-tab-target="tab-evaluate">
+
+          <p class="nav-section-title">Мониторинг</p>
+          <button class="step-btn" type="button" data-step="5" data-tab-target="tab-overview">
             <span class="step-number">5</span>
             <span class="step-info">
-              <span class="step-title">Evaluation</span>
-              <span class="step-desc">Review metrics</span>
+              <span class="step-title">Метрики</span>
+              <span class="step-desc">Живой мониторинг</span>
             </span>
           </button>
-          <button class="step-btn" type="button" data-step="6" data-tab-target="tab-deploy">
+          <button class="step-btn" type="button" data-step="6" data-tab-target="tab-resources">
             <span class="step-number">6</span>
             <span class="step-info">
-              <span class="step-title">Deploy</span>
-              <span class="step-desc">Export & serve</span>
-            </span>
-          </button>
-          
-          <p class="nav-section-title">Monitoring</p>
-          <button class="step-btn" type="button" data-step="7" data-tab-target="tab-metrics">
-            <span class="step-number">7</span>
-            <span class="step-info">
-              <span class="step-title">Metrics</span>
-              <span class="step-desc">Live monitoring</span>
-            </span>
-          </button>
-          <button class="step-btn" type="button" data-step="8" data-tab-target="tab-resources">
-            <span class="step-number">8</span>
-            <span class="step-info">
-              <span class="step-title">Resources</span>
-              <span class="step-desc">System usage</span>
+              <span class="step-title">Ресурсы</span>
+              <span class="step-desc">Нагрузка системы</span>
             </span>
           </button>
         </nav>
         
         <div class="nav-footer">
-          <button id="prev-step" class="nav-btn" type="button" disabled>← Back</button>
-          <button id="next-step" class="nav-btn nav-btn-primary" type="button">Next →</button>
+          <button id="prev-step" class="nav-btn" type="button" disabled>← Назад</button>
+          <button id="next-step" class="nav-btn nav-btn-primary" type="button">Далее →</button>
         </div>
       </aside>
 
       <section class="tab-content">
-        <section class="tab-pane tab-pane-grid overview-layout is-active" id="tab-overview">
+        <section class="tab-pane tab-pane-grid overview-layout is-active" id="tab-overview" data-content-group="Обзор">
           <article class="panel layout-main layout-hero">
-            <div class="panel-title-row"><h2>Mission Snapshot</h2><span class="tag">Native Control</span></div>
+            <div class="panel-title-row"><h2>Сводка проекта</h2><span class="tag">Панель управления</span></div>
             <div class="mission-hero">
               <div class="hero-copy">
-                <p class="eyebrow">Operations</p>
-                <h3>Observe, train, compare, serve</h3>
+                <p class="eyebrow">Рабочий процесс</p>
+                <h3>Наблюдайте, обучайте, сравнивайте, публикуйте</h3>
                 <p class="hero-text">
-                  One operator surface for dataset intake, architecture editing, experiment review, TensorBoard, MLflow and TorchServe.
+                  Единая панель для данных, архитектур, экспериментов, TensorBoard, MLflow и TorchServe.
                 </p>
                 <div class="hero-actions">
-                  <button class="btn btn-primary" type="button" data-jump-tab="tab-studio">Open Studio</button>
-                  <button class="btn btn-accent" type="button" data-jump-tab="tab-experiments">Review Runs</button>
-                  <button class="btn" type="button" data-jump-tab="tab-resources">Resource View</button>
+                  <button class="btn btn-primary" type="button" data-jump-tab="tab-studio">Открыть студию</button>
+                  <button class="btn btn-accent" type="button" data-jump-tab="tab-experiments">Посмотреть запуски</button>
+                  <button class="btn" type="button" data-jump-tab="tab-resources">Ресурсы</button>
                 </div>
               </div>
               <div class="hero-aside">
                 <div class="hero-signal">
-                  <p class="hero-kicker">Flight Status</p>
-                  <strong id="hero-health-label">Awaiting telemetry</strong>
-                  <span id="hero-health-note">Health checks and experiment catalog are loading.</span>
+                  <p class="hero-kicker">Состояние системы</p>
+                  <strong id="hero-health-label">Ожидание телеметрии</strong>
+                  <span id="hero-health-note">Загружаются проверки здоровья и каталог экспериментов.</span>
                 </div>
                 <div class="hero-mini-grid">
                   <div class="hero-mini-card">
-                    <span>Tracked runs</span>
+                    <span>Запуски</span>
                     <strong id="hero-tracked-runs">0</strong>
                   </div>
                   <div class="hero-mini-card">
-                    <span>Running jobs</span>
+                    <span>Активные задачи</span>
                     <strong id="hero-running-jobs">0</strong>
                   </div>
                   <div class="hero-mini-card">
-                    <span>Best mAP50</span>
+                    <span>Лучший mAP50</span>
                     <strong id="hero-best-map50">--</strong>
                   </div>
                   <div class="hero-mini-card">
-                    <span>Served models</span>
+                    <span>Модели в сервисе</span>
                     <strong id="hero-served-models">0</strong>
                   </div>
                 </div>
               </div>
             </div>
             <div class="summary-grid">
-              <div class="summary-card"><p class="summary-label">Datasets</p><p id="summary-datasets" class="summary-value">0</p><p class="summary-note">registered sources</p></div>
-              <div class="summary-card"><p class="summary-label">Configs</p><p id="summary-configs" class="summary-value">0</p><p class="summary-note">editable experiment plans</p></div>
-              <div class="summary-card"><p class="summary-label">Architectures</p><p id="summary-architectures" class="summary-value">0</p><p class="summary-note">builtin + custom models</p></div>
-              <div class="summary-card"><p class="summary-label">Experiments</p><p id="summary-experiments" class="summary-value">0</p><p class="summary-note">local and MLflow tracked</p></div>
-              <div class="summary-card"><p class="summary-label">Jobs</p><p id="summary-jobs" class="summary-value">0</p><p class="summary-note">train/eval lifecycle</p></div>
-              <div class="summary-card"><p class="summary-label">Running</p><p id="summary-running" class="summary-value">0</p><p class="summary-note">active background work</p></div>
+              <div class="summary-card"><p class="summary-label">Датасеты</p><p id="summary-datasets" class="summary-value">0</p><p class="summary-note">зарегистрированные источники</p></div>
+              <div class="summary-card"><p class="summary-label">Конфиги</p><p id="summary-configs" class="summary-value">0</p><p class="summary-note">планы экспериментов</p></div>
+              <div class="summary-card"><p class="summary-label">Архитектуры</p><p id="summary-architectures" class="summary-value">0</p><p class="summary-note">встроенные и пользовательские</p></div>
+              <div class="summary-card"><p class="summary-label">Эксперименты</p><p id="summary-experiments" class="summary-value">0</p><p class="summary-note">локальные и MLflow</p></div>
+              <div class="summary-card"><p class="summary-label">Задачи</p><p id="summary-jobs" class="summary-value">0</p><p class="summary-note">обучение и оценка</p></div>
+              <div class="summary-card"><p class="summary-label">Активные</p><p id="summary-running" class="summary-value">0</p><p class="summary-note">фоновые процессы</p></div>
             </div>
-            <div class="subsection-head"><h3>System Recommendations</h3><span class="hint">Best current runs by mAP50, FPS and latency</span></div>
+            <div class="subsection-head"><h3>Рекомендации системы</h3><span class="hint">Лучшие текущие запуски по mAP50, FPS и задержке</span></div>
             <div id="recommendations-list" class="recommendation-list"></div>
           </article>
 
           <article class="panel panel-compact layout-side">
-            <div class="panel-title-row"><h2>Live Metrics</h2><span class="tag">Prometheus</span></div>
+            <div class="panel-title-row"><h2>Живые метрики</h2><span class="tag">Prometheus</span></div>
             <div class="kpi-grid">
               <div class="kpi-card" data-metric="map50"><p class="kpi-label">mAP50</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
               <div class="kpi-card" data-metric="map75"><p class="kpi-label">mAP75</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
-              <div class="kpi-card" data-metric="latency"><p class="kpi-label">Latency (ms)</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
+              <div class="kpi-card" data-metric="latency"><p class="kpi-label">Задержка (мс)</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
               <div class="kpi-card" data-metric="fps"><p class="kpi-label">FPS</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
-              <div class="kpi-card" data-metric="health"><p class="kpi-label">Service Health</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
-              <div class="kpi-card" data-metric="host_cpu"><p class="kpi-label">Host CPU %</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
-              <div class="kpi-card" data-metric="host_mem"><p class="kpi-label">Host Memory %</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
-              <div class="kpi-card" data-metric="firing_alerts"><p class="kpi-label">Firing Alerts</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
+              <div class="kpi-card" data-metric="health"><p class="kpi-label">Здоровье сервисов</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
+              <div class="kpi-card" data-metric="host_cpu"><p class="kpi-label">CPU хоста %</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
+              <div class="kpi-card" data-metric="host_mem"><p class="kpi-label">Память хоста %</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
+              <div class="kpi-card" data-metric="firing_alerts"><p class="kpi-label">Активные алерты</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
             </div>
           </article>
 
           <article class="panel span-all layout-wide">
             <div class="panel-title-row">
-              <h2>Dashboards</h2>
+              <h2>Дашборды</h2>
               <div class="dashboard-toolbar">
                 <div class="dashboard-tabs" id="dashboard-tabs">
-                  <button class="dash-tab is-active" type="button" data-src="/api/grafana/d/uav-system-overview/uav-system-overview?orgId=1&kiosk">System</button>
-                  <button class="dash-tab" type="button" data-src="/api/grafana/d/uav-training-inference/uav-training-inference?orgId=1&kiosk">Training</button>
-                  <button class="dash-tab" type="button" data-src="/api/grafana/d/uav-resource-control/uav-resource-control?orgId=1&kiosk">Resources</button>
+                  <button class="dash-tab is-active" type="button" data-src="/api/grafana/d/uav-system-overview/uav-system-overview?orgId=1&kiosk">Система</button>
+                  <button class="dash-tab" type="button" data-src="/api/grafana/d/uav-training-inference/uav-training-inference?orgId=1&kiosk">Обучение</button>
+                  <button class="dash-tab" type="button" data-src="/api/grafana/d/uav-resource-control/uav-resource-control?orgId=1&kiosk">Ресурсы</button>
                 </div>
                 <div class="dashboard-meta">
-                  <a id="dashboard-open" href="/api/grafana/" target="_blank" rel="noreferrer">Open full</a>
-                  <button id="dashboard-reload" class="btn btn-inline" type="button">Reload</button>
-                  <span id="dashboard-status" class="hint dash-status">Loading dashboard...</span>
+                  <a id="dashboard-open" href="/api/grafana/" target="_blank" rel="noreferrer">Открыть полностью</a>
+                  <button id="dashboard-reload" class="btn btn-inline" type="button">Обновить</button>
+                  <span id="dashboard-status" class="hint dash-status">Загрузка дашборда...</span>
                 </div>
               </div>
             </div>
             <div class="dashboard-shell" id="dashboard-shell">
-              <div id="dashboard-loader" class="dashboard-loader">Loading dashboard...</div>
-              <iframe id="dashboard-frame" title="Grafana Dashboard" loading="lazy"></iframe>
+              <div id="dashboard-loader" class="dashboard-loader">Загрузка дашборда...</div>
+              <iframe id="dashboard-frame" title="Дашборд Grafana" loading="lazy"></iframe>
             </div>
           </article>
         </section>
 
-        <section class="tab-pane tab-pane-grid datasets-layout" id="tab-datasets">
+        <section class="tab-pane tab-pane-grid datasets-layout" id="tab-datasets" data-content-group="Данные">
           <article class="panel layout-main">
-            <div class="panel-title-row"><h2>Dataset Intake</h2><span class="tag">Upload + Register</span></div>
+            <div class="panel-title-row"><h2>Загрузка данных</h2><span class="tag">Загрузка + регистрация</span></div>
             <form id="dataset-upload-form" class="form-grid">
-              <label>Dataset name<input name="dataset_name" type="text" placeholder="uav_night_fog_v1" /></label>
-              <label>Archive<input name="file" type="file" accept=".zip,.tar,.gz,.tgz" /></label>
-              <label>Tags<input name="tags" type="text" placeholder="night, fog, drone" /></label>
-              <label class="wide-field">Description<textarea name="description" rows="4" placeholder="What conditions and annotations are inside?"></textarea></label>
+              <label>Название датасета<input name="dataset_name" type="text" placeholder="uav_night_fog_v1" /></label>
+              <div class="file-field">
+                <span class="file-label">Архив</span>
+                <div class="file-picker" data-file-drop="dataset-file">
+                  <input id="dataset-file" name="file" type="file" accept=".zip,.tar,.gz,.tgz" />
+                  <span class="file-drop-hint">Перетащите архив сюда для загрузки с компьютера</span>
+                  <span id="dataset-file-name" class="file-name">Файл не выбран</span>
+                </div>
+              </div>
+              <label>Путь к архиву в workspace
+                <div class="input-action-row">
+                  <input id="dataset-archive-path" name="archive_path" type="text" placeholder="data/uploads/uav_dataset.zip" />
+                  <button class="btn btn-inline" type="button" data-workspace-file-picker data-file-kind="dataset_archive" data-file-target="dataset-archive-path">Из workspace</button>
+                </div>
+              </label>
+              <label>Теги<input name="tags" type="text" placeholder="ночь, туман, дрон" /></label>
+              <label class="wide-field">Описание<textarea name="description" rows="4" placeholder="Какие условия съемки и аннотации внутри?"></textarea></label>
             </form>
-            <div class="inline-actions"><button id="dataset-upload-btn" class="btn btn-primary" type="button">Upload Archive</button></div>
-            <div class="subsection-head"><h3>Register Existing Folder</h3><span class="hint">Attach already available data without copying</span></div>
+            <div class="inline-actions">
+              <button id="dataset-upload-btn" class="btn btn-primary" type="button">Загрузить</button>
+              <button id="dataset-import-path-btn" class="btn" type="button">Импорт по пути</button>
+            </div>
+            <div class="subsection-head"><h3>Зарегистрировать папку</h3><span class="hint">Подключить существующие данные без копирования</span></div>
             <form id="dataset-register-form" class="form-grid">
-              <label>Name<input name="name" type="text" placeholder="uav_processed_set" /></label>
-              <label>Path<input name="path" type="text" placeholder="data/processed/uav_coco" /></label>
-              <label>Tags<input name="tags" type="text" placeholder="processed, coco" /></label>
-              <label class="wide-field">Description<textarea name="description" rows="4" placeholder="Optional notes for the team"></textarea></label>
+              <label>Название<input name="name" type="text" placeholder="uav_processed_set" /></label>
+              <label>Путь<input name="path" type="text" placeholder="data/processed/uav_coco" /></label>
+              <label>Теги<input name="tags" type="text" placeholder="processed, coco" /></label>
+              <label class="wide-field">Описание<textarea name="description" rows="4" placeholder="Дополнительные заметки"></textarea></label>
             </form>
-            <div class="inline-actions"><button id="dataset-register-btn" class="btn btn-accent" type="button">Register Path</button></div>
-            <p id="dataset-status" class="hint">Dataset intake is ready.</p>
+            <div class="inline-actions"><button id="dataset-register-btn" class="btn btn-accent" type="button">Зарегистрировать</button></div>
+            <p id="dataset-status" class="hint">Загрузка данных готова.</p>
           </article>
 
           <article class="panel span-all layout-wide">
             <div class="panel-title-row">
-              <h2>Dataset Library</h2>
+              <h2>Библиотека датасетов</h2>
               <div class="toolbar-inline">
-                <input id="dataset-search" type="text" placeholder="Filter by name, path or tag" />
-                <button id="datasets-refresh" class="btn btn-inline" type="button">Refresh</button>
+                <input id="dataset-search" type="text" placeholder="Фильтр по названию, пути или тегу" />
+                <button id="datasets-refresh" class="btn btn-inline" type="button">Обновить</button>
               </div>
             </div>
             <div id="dataset-list" class="dataset-grid"></div>
           </article>
         </section>
 
-        <section class="tab-pane tab-pane-grid studio-layout" id="tab-studio">
+        <section class="tab-pane tab-pane-grid studio-layout" id="tab-studio" data-content-group="Студия">
           <article class="panel layout-rail">
-            <div class="panel-title-row"><h2>Experiment Configs</h2><span id="config-active-badge" class="tag">No config</span></div>
+            <div class="panel-title-row"><h2>Конфиги экспериментов</h2><span id="config-active-badge" class="tag">Нет конфига</span></div>
             <div class="toolbar-inline">
-              <input id="config-search" type="text" placeholder="Filter configs" />
-              <button id="config-new" class="btn btn-inline" type="button">New</button>
-              <button id="configs-refresh" class="btn btn-inline" type="button">Refresh</button>
+              <input id="config-search" type="text" placeholder="Фильтр конфигов" />
+              <button id="config-new" class="btn btn-inline" type="button">Новый</button>
+              <button id="configs-refresh" class="btn btn-inline" type="button">Обновить</button>
             </div>
             <div id="config-list" class="library-list"></div>
           </article>
 
           <article class="panel layout-main">
-            <div class="panel-title-row"><h2>Config Editor</h2><span class="tag">YAML</span></div>
-            <div class="form-grid"><label>Config name<input id="config-name" type="text" placeholder="new_experiment" /></label></div>
+            <div class="panel-title-row"><h2>Редактор конфига</h2><span class="tag">YAML</span></div>
+            <div class="form-grid"><label>Название конфига<input id="config-name" type="text" placeholder="new_experiment" /></label></div>
             <textarea id="config-editor" class="editor code-editor" rows="20" spellcheck="false"></textarea>
             <div class="inline-actions">
-              <button id="config-save" class="btn btn-primary" type="button">Save Config</button>
-              <button id="config-copy" class="btn" type="button">Copy YAML</button>
+              <button id="config-save" class="btn btn-primary" type="button">Сохранить конфиг</button>
+              <button id="config-copy" class="btn" type="button">Копировать YAML</button>
             </div>
-            <p id="config-status" class="hint">Load or create a config to start.</p>
+            <p id="config-status" class="hint">Загрузите или создайте конфиг.</p>
           </article>
 
           <article class="panel layout-rail">
-            <div class="panel-title-row"><h2>Architecture Library</h2><span id="architecture-active-badge" class="tag">No model</span></div>
+            <div class="panel-title-row"><h2>Библиотека архитектур</h2><span id="architecture-active-badge" class="tag">Нет модели</span></div>
             <div class="toolbar-inline">
-              <input id="architecture-search" type="text" placeholder="Filter architectures" />
-              <button id="architecture-new" class="btn btn-inline" type="button">New</button>
-              <button id="architectures-refresh" class="btn btn-inline" type="button">Refresh</button>
+              <input id="architecture-search" type="text" placeholder="Фильтр архитектур" />
+              <button id="architecture-new" class="btn btn-inline" type="button">Новый</button>
+              <button id="architectures-refresh" class="btn btn-inline" type="button">Обновить</button>
             </div>
             <div id="architecture-list" class="library-list"></div>
           </article>
 
           <article class="panel span-all layout-wide constructor-panel">
-            <div class="panel-title-row"><h2>Architecture Constructor</h2><span class="tag">Drag, Drop, Tune</span></div>
+            <div class="panel-title-row"><h2>Конструктор архитектуры</h2><span class="tag">Перетащить, собрать, настроить</span></div>
             <div class="constructor-grid">
               <section class="constructor-side">
                 <div class="constructor-guide">
                   <article class="constructor-step-card">
                     <span class="constructor-step-index">1</span>
-                    <div><strong>Pick blocks</strong><p>Choose layers from the palette like building pieces.</p></div>
+                    <div><strong>Выберите блоки</strong><p>Берите слои из палитры как строительные элементы.</p></div>
                   </article>
                   <article class="constructor-step-card">
                     <span class="constructor-step-index">2</span>
-                    <div><strong>Drop into heads</strong><p>Drag cards into the classifier or bbox lane and reorder them freely.</p></div>
+                    <div><strong>Перетащите в головы</strong><p>Кладите карточки в классификатор или bbox-ветку и меняйте порядок.</p></div>
                   </article>
                   <article class="constructor-step-card">
                     <span class="constructor-step-index">3</span>
-                    <div><strong>Tune and preview</strong><p>Parameters are auto-filled, then refined with recommendations.</p></div>
+                    <div><strong>Настройте и проверьте</strong><p>Параметры заполняются автоматически и уточняются рекомендациями.</p></div>
                   </article>
                 </div>
                 <div class="form-grid">
-                  <label>Name<input id="constructor-name" type="text" placeholder="builder_detector" /></label>
-                  <label>Dataset<select id="constructor-dataset"><option value="">Auto / none</option></select></label>
-                  <label>Base model<select id="constructor-base-model"></select></label>
-                  <label>Goal<select id="constructor-goal"></select></label>
-                  <label>Checkpoint<input id="constructor-checkpoint" type="text" placeholder="facebook/detr-resnet-50" /></label>
-                  <label>Labels<input id="constructor-labels" type="text" placeholder="uav" /></label>
+                  <label>Название<input id="constructor-name" type="text" placeholder="builder_detector" /></label>
+                  <label>Датасет<select id="constructor-dataset"><option value="">Авто / нет</option></select></label>
+                  <label>Базовая модель<select id="constructor-base-model"></select></label>
+                  <label>Цель<select id="constructor-goal"></select></label>
+                  <label>Чекпоинт<input id="constructor-checkpoint" type="text" placeholder="facebook/detr-resnet-50" /></label>
+                  <label>Метки<input id="constructor-labels" type="text" placeholder="uav" /></label>
                 </div>
                 <div class="inline-actions">
-                  <button id="constructor-recommend" class="btn btn-accent" type="button">Recommend</button>
-                  <button id="constructor-generate" class="btn btn-primary" type="button">Generate Preview</button>
-                  <button id="constructor-reset" class="btn" type="button">Reset</button>
+                  <button id="constructor-recommend" class="btn btn-accent" type="button">Рекомендовать</button>
+                  <button id="constructor-generate" class="btn btn-primary" type="button">Создать превью</button>
+                  <button id="constructor-reset" class="btn" type="button">Сбросить</button>
                 </div>
-                <p id="constructor-status" class="hint">Drag a layer tile into a head lane. Default parameters appear automatically.</p>
+                <p id="constructor-status" class="hint">Перетащите слой в ветку головы. Параметры появятся автоматически.</p>
                 <div id="constructor-summary" class="recommendation-list constructor-summary"></div>
               </section>
 
               <section class="constructor-main">
                 <div class="constructor-playground">
                   <div class="constructor-palette-panel">
-                    <div class="subsection-head"><h3>Layer Palette</h3><span class="hint">Grab a tile and drop it into a lane.</span></div>
+                    <div class="subsection-head"><h3>Палитра слоев</h3><span class="hint">Возьмите карточку и перенесите в ветку.</span></div>
                     <div id="constructor-layer-catalog" class="layer-catalog layer-catalog-play"></div>
                   </div>
                   <div class="constructor-stack-panel">
-                    <div class="subsection-head"><h3>Build Area</h3><span class="hint">Blue lane for class logits, amber lane for boxes.</span></div>
+                    <div class="subsection-head"><h3>Область сборки</h3><span class="hint">Синяя ветка для классов, янтарная для bbox.</span></div>
                     <div class="constructor-stack-grid">
                       <div class="stack-panel stack-panel-classifier">
-                        <div class="subsection-head"><h3>Classifier Head</h3><span class="hint">Drop blocks for class logits</span></div>
+                        <div class="subsection-head"><h3>Голова классификатора</h3><span class="hint">Слои для class logits</span></div>
                         <div id="constructor-classifier-stack" class="builder-stack" data-head-name="classifier"></div>
                       </div>
                       <div class="stack-panel stack-panel-bbox">
-                        <div class="subsection-head"><h3>BBox Head</h3><span class="hint">Drop blocks for box regression</span></div>
+                        <div class="subsection-head"><h3>BBox-голова</h3><span class="hint">Слои для регрессии рамок</span></div>
                         <div id="constructor-bbox-stack" class="builder-stack" data-head-name="bbox"></div>
                       </div>
                     </div>
@@ -324,172 +337,182 @@
               </section>
 
               <aside class="constructor-monitor">
-                <div class="subsection-head"><h3>Architecture Monitor</h3><span class="hint">Overview and quick actions for the current blueprint</span></div>
+                <div class="subsection-head"><h3>Монитор архитектуры</h3><span class="hint">Обзор и быстрые действия для текущей схемы</span></div>
                 <div id="constructor-monitor" class="constructor-monitor-shell">
                   <div id="constructor-monitor-info" class="monitor-info"></div>
                   <div id="constructor-monitor-metrics" class="monitor-metrics"></div>
                   <div class="inline-actions monitor-actions">
-                    <button id="constructor-edit-open" class="btn btn-inline" type="button">Open Editor</button>
-                    <button id="constructor-export-blueprint" class="btn btn-inline" type="button">Copy Blueprint</button>
+                    <button id="constructor-edit-open" class="btn btn-inline" type="button">Открыть редактор</button>
+                    <button id="constructor-export-blueprint" class="btn btn-inline" type="button">Копировать схему</button>
                   </div>
-                  <div class="subsection-head"><h4>Visual Preview</h4></div>
-                  <div id="constructor-visual-preview" class="constructor-visual" role="img" aria-label="Architecture preview"></div>
+                  <div class="subsection-head"><h4>Визуальное превью</h4></div>
+                  <div id="constructor-visual-preview" class="constructor-visual" role="img" aria-label="Превью архитектуры"></div>
                 </div>
               </aside>
             </div>
           </article>
 
-          <article class="panel layout-main">
-            <div class="panel-title-row"><h2>Architecture Editor</h2><span class="tag">Code + Template</span></div>
+          <article class="panel span-all layout-wide">
+            <div class="panel-title-row"><h2>Редактор архитектуры</h2><span class="tag">Код + шаблон</span></div>
             <div class="form-grid">
-              <label>Name<input id="architecture-name" type="text" placeholder="my_detector" /></label>
-              <label>Tags<input id="architecture-tags" type="text" placeholder="vit, custom, research" /></label>
-              <label class="wide-field">Description<textarea id="architecture-description" rows="3" placeholder="How this architecture differs from baseline"></textarea></label>
-              <label class="wide-field">Default config YAML<textarea id="architecture-config" class="editor mini-editor" rows="10" spellcheck="false"></textarea></label>
+              <label>Название<input id="architecture-name" type="text" placeholder="my_detector" /></label>
+              <label>Теги<input id="architecture-tags" type="text" placeholder="vit, custom, research" /></label>
+              <label class="wide-field">Описание<textarea id="architecture-description" rows="3" placeholder="Чем архитектура отличается от базовой"></textarea></label>
+              <label class="wide-field">YAML конфига по умолчанию<textarea id="architecture-config" class="editor mini-editor" rows="10" spellcheck="false"></textarea></label>
             </div>
-            <label class="wide-field">Source code<textarea id="architecture-source" class="editor code-editor" rows="16" spellcheck="false"></textarea></label>
+            <label class="wide-field">Исходный код<textarea id="architecture-source" class="editor code-editor" rows="16" spellcheck="false"></textarea></label>
             <div class="inline-actions">
-              <button id="architecture-save" class="btn btn-primary" type="button">Save Architecture</button>
-              <button id="architecture-use-config" class="btn" type="button">Load Template to Config Editor</button>
+              <button id="architecture-save" class="btn btn-primary" type="button">Сохранить архитектуру</button>
+              <button id="architecture-use-config" class="btn" type="button">Загрузить шаблон в конфиг</button>
             </div>
-            <p id="architecture-status" class="hint">Builtin and custom models are editable here.</p>
+            <p id="architecture-status" class="hint">Здесь редактируются встроенные и пользовательские модели.</p>
           </article>
 
           <article class="panel span-all layout-wide">
-            <div class="panel-title-row"><h2>Launch Control</h2><span class="tag">Train / Evaluate</span></div>
+            <div class="panel-title-row"><h2>Панель запуска</h2><span class="tag">Обучение / оценка</span></div>
             <div class="form-grid">
-              <label>Save current YAML as<input id="launch-save-as" type="text" placeholder="optional_config_name" /></label>
-              <label>Eval split<select id="launch-split"><option value="test">test</option><option value="val">val</option></select></label>
+              <label>Сохранить текущий YAML как<input id="launch-save-as" type="text" placeholder="optional_config_name" /></label>
+              <label>Выборка оценки<select id="launch-split"><option value="test">тест</option><option value="val">валидация</option></select></label>
             </div>
             <div class="inline-actions">
-              <button id="launch-train" class="btn btn-primary" type="button">Start Training</button>
-              <button id="launch-evaluate" class="btn btn-accent" type="button">Run Evaluation</button>
+              <button id="launch-train" class="btn btn-primary" type="button">Запустить обучение</button>
+              <button id="launch-evaluate" class="btn btn-accent" type="button">Запустить оценку</button>
               <a class="btn btn-link" href="/api/mlflow/" target="_blank" rel="noreferrer">MLflow</a>
             </div>
-            <p id="studio-status" class="hint">Current config editor content is used as the launch payload.</p>
+            <p id="studio-status" class="hint">Для запуска используется содержимое редактора конфига.</p>
           </article>
         </section>
 
-        <section class="tab-pane tab-pane-grid experiments-layout" id="tab-experiments">
+        <section class="tab-pane tab-pane-grid experiments-layout" id="tab-experiments" data-content-group="Эксперименты">
           <article class="panel span-all layout-wide">
-            <div class="panel-title-row"><h2>Experiment Registry</h2><span class="tag">MLflow + Local Runs</span></div>
+            <div class="panel-title-row"><h2>Реестр экспериментов</h2><span class="tag">MLflow + локальные запуски</span></div>
             <div class="form-grid filters-grid">
-              <label>Search<input id="experiment-search" type="text" placeholder="run name, model, tag" /></label>
-              <label>Model<select id="experiment-model-filter"><option value="">all</option></select></label>
-              <label>Status<select id="experiment-status-filter"><option value="">all</option><option value="running">running</option><option value="completed">completed</option><option value="finished">finished</option><option value="failed">failed</option></select></label>
-              <label>Min mAP50<input id="experiment-min-map50" type="number" min="0" max="1" step="0.01" placeholder="0.40" /></label>
+              <label>Поиск<input id="experiment-search" type="text" placeholder="имя запуска, модель, тег" /></label>
+              <label>Модель<select id="experiment-model-filter"><option value="">все</option></select></label>
+              <label>Статус<select id="experiment-status-filter"><option value="">все</option><option value="running">выполняется</option><option value="completed">завершено</option><option value="finished">готово</option><option value="failed">ошибка</option></select></label>
+              <label>Мин. mAP50<input id="experiment-min-map50" type="number" min="0" max="1" step="0.01" placeholder="0.40" /></label>
             </div>
-            <div class="inline-actions"><button id="experiments-refresh" class="btn btn-inline" type="button">Refresh</button></div>
+            <div class="inline-actions"><button id="experiments-refresh" class="btn btn-inline" type="button">Обновить</button></div>
             <div class="table-shell scroll-table">
               <table>
-                <thead><tr><th>Compare</th><th>Run</th><th>Model</th><th>Status</th><th>mAP50</th><th>FPS</th><th>Latency</th><th>Rating</th><th>Tags</th></tr></thead>
+                <thead><tr><th>Сравнить</th><th>Запуск</th><th>Модель</th><th>Статус</th><th>mAP50</th><th>FPS</th><th>Задержка</th><th>Оценка</th><th>Теги</th></tr></thead>
                 <tbody id="experiments-body"></tbody>
               </table>
             </div>
           </article>
 
-          <article class="panel layout-half"><div class="panel-title-row"><h2>Compare Runs</h2><span class="tag">Selected</span></div><div id="compare-shell" class="table-shell"></div></article>
+          <article class="panel layout-half"><div class="panel-title-row"><h2>Сравнить Запускs</h2><span class="tag">Выбрано</span></div><div id="compare-shell" class="table-shell"></div></article>
 
           <article class="panel layout-half">
-            <div class="panel-title-row"><h2>Experiment Admin</h2><span id="experiment-selected-badge" class="tag">No selection</span></div>
+            <div class="panel-title-row"><h2>Администрирование эксперимента</h2><span id="experiment-selected-badge" class="tag">Ничего не выбрано</span></div>
             <div class="form-grid">
-              <label>Tags<input id="experiment-tags" type="text" placeholder="best, night, low-latency" /></label>
-              <label>Rating<select id="experiment-rating"><option value="">unset</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label>
-              <label class="wide-field">Note<textarea id="experiment-note" rows="5" placeholder="Observations, risks, deployment notes"></textarea></label>
+              <label>Теги<input id="experiment-tags" type="text" placeholder="best, night, low-latency" /></label>
+              <label>Оценка<select id="experiment-rating"><option value="">нет</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label>
+              <label class="wide-field">Заметка<textarea id="experiment-note" rows="5" placeholder="Наблюдения, риски, заметки для публикации"></textarea></label>
             </div>
             <div class="inline-actions">
-              <button id="experiment-save-meta" class="btn btn-primary" type="button">Save Metadata</button>
-              <a class="btn btn-link" href="/api/mlflow/" target="_blank" rel="noreferrer">Open MLflow</a>
+              <button id="experiment-save-meta" class="btn btn-primary" type="button">Сохранить метаданные</button>
+              <a class="btn btn-link" href="/api/mlflow/" target="_blank" rel="noreferrer">Открыть MLflow</a>
             </div>
-            <p id="experiment-meta-status" class="hint">Select a run to edit tags, rating and notes.</p>
+            <p id="experiment-meta-status" class="hint">Выберите запуск, чтобы изменить теги, оценку и заметки.</p>
           </article>
 
-          <article class="panel layout-half"><div class="panel-title-row"><h2>Jobs</h2><span class="tag">Lifecycle</span></div><div id="job-list" class="job-list"></div></article>
+          <article class="panel layout-half"><div class="panel-title-row"><h2>Задачи</h2><span class="tag">Жизненный цикл</span></div><div id="job-list" class="job-list"></div></article>
 
           <article class="panel layout-half">
-            <div class="panel-title-row"><h2>Job Console</h2><div class="toolbar-inline"><span id="job-log-label" class="hint">Select a job</span><button id="job-log-refresh" class="btn btn-inline" type="button">Refresh</button></div></div>
-            <pre id="job-log-output" class="code-box log-box">No job selected.</pre>
+            <div class="panel-title-row"><h2>Консоль задачи</h2><div class="toolbar-inline"><span id="job-log-label" class="hint">Выберите задачу</span><button id="job-log-refresh" class="btn btn-inline" type="button">Обновить</button></div></div>
+            <pre id="job-log-output" class="code-box log-box">Задача не выбрана.</pre>
           </article>
 
           <article class="panel span-all layout-wide">
-            <div class="panel-title-row"><h2>TensorBoard</h2><div class="dashboard-meta"><a href="/api/tensorboard/" target="_blank" rel="noreferrer">Open full</a><button id="tensorboard-reload" class="btn btn-inline" type="button">Reload</button><span id="tensorboard-status" class="hint">Checking TensorBoard...</span></div></div>
-            <div class="dashboard-shell" id="tensorboard-shell"><div id="tensorboard-loader" class="dashboard-loader">Loading TensorBoard...</div><iframe id="tensorboard-frame" title="TensorBoard" loading="lazy"></iframe></div>
+            <div class="panel-title-row"><h2>TensorBoard</h2><div class="dashboard-meta"><a href="/api/tensorboard/" target="_blank" rel="noreferrer">Открыть полностью</a><button id="tensorboard-reload" class="btn btn-inline" type="button">Обновить</button><span id="tensorboard-status" class="hint">Проверка TensorBoard...</span></div></div>
+            <div class="dashboard-shell" id="tensorboard-shell"><div id="tensorboard-loader" class="dashboard-loader">Загрузка TensorBoard...</div><iframe id="tensorboard-frame" title="TensorBoard" loading="lazy"></iframe></div>
           </article>
         </section>
 
-        <section class="tab-pane tab-pane-grid serving-layout" id="tab-serving">
+        <section class="tab-pane tab-pane-grid serving-layout" id="tab-serving" data-content-group="Публикация">
           <article class="panel layout-half">
-            <div class="panel-title-row"><h2>TorchServe Registry</h2><span class="tag">Admin</span></div>
+            <div class="panel-title-row"><h2>Реестр TorchServe</h2><span class="tag">Администрирование</span></div>
             <div class="form-grid">
-              <label>Model name<input id="torchserve-model-name" type="text" placeholder="uav_detector" /></label>
-              <label>Archive file<input id="torchserve-archive-file" type="text" placeholder="uav_detector.mar" /></label>
-              <label>Initial workers<input id="torchserve-workers" type="number" min="1" max="8" value="1" /></label>
+              <label>Название модели<input id="torchserve-model-name" type="text" placeholder="uav_detector" /></label>
+              <label>Файл архива
+                <div class="input-action-row">
+                  <input id="torchserve-archive-file" type="text" placeholder="uav_detector.mar" />
+                  <button class="btn btn-inline" type="button" data-workspace-file-picker data-file-kind="torchserve_archive" data-file-target="torchserve-archive-file">Из workspace</button>
+                </div>
+              </label>
+              <label>Начальные workers<input id="torchserve-workers" type="number" min="1" max="8" value="1" /></label>
             </div>
-            <div class="inline-actions"><button id="torchserve-register" class="btn btn-primary" type="button">Register Model</button><button id="torchserve-refresh" class="btn" type="button">Refresh Registry</button></div>
-            <p id="torchserve-status" class="hint">TorchServe status will appear here.</p>
+            <div class="inline-actions"><button id="torchserve-register" class="btn btn-primary" type="button">Зарегистрировать модель</button><button id="torchserve-refresh" class="btn" type="button">Обновить реестр</button></div>
+            <p id="torchserve-status" class="hint">Статус TorchServe появится здесь.</p>
             <div id="torchserve-models" class="library-list"></div>
           </article>
 
           <article class="panel layout-half">
-            <div class="panel-title-row"><h2>Inference Probe</h2><span class="tag">Predict</span></div>
+            <div class="panel-title-row"><h2>Проверка инференса</h2><span class="tag">Предсказание</span></div>
             <div class="form-grid">
-              <label>Model name<input id="inference-model-name" type="text" placeholder="uav_detector" /></label>
-              <label>Image<input id="inference-file" type="file" accept="image/*" /></label>
+              <label>Название модели<input id="inference-model-name" type="text" placeholder="uav_detector" /></label>
+              <div class="file-field">
+                <span class="file-label">Изображение</span>
+                <div class="file-picker" data-file-drop="inference-file">
+                  <input id="inference-file" type="file" accept="image/*" />
+                  <span class="file-drop-hint">Перетащите изображение сюда для загрузки с компьютера</span>
+                  <span id="inference-file-name" class="file-name">Файл не выбран</span>
+                </div>
+              </div>
+              <label>Путь к изображению в workspace
+                <div class="input-action-row">
+                  <input id="inference-image-path" type="text" placeholder="data/processed/demo/images/test/frame.jpg" />
+                  <button class="btn btn-inline" type="button" data-workspace-file-picker data-file-kind="image" data-file-target="inference-image-path">Из workspace</button>
+                </div>
+              </label>
             </div>
-            <div class="inline-actions"><button id="run-inference" class="btn btn-accent" type="button">Run Inference</button></div>
-            <pre id="inference-output" class="code-box">Inference results will appear here.</pre>
+            <div class="inline-actions"><button id="run-inference" class="btn btn-accent" type="button">Запустить инференс</button></div>
+            <pre id="inference-output" class="code-box">Результаты инференса появятся здесь.</pre>
           </article>
 
-          <article class="panel span-all layout-wide">
-            <div class="panel-title-row"><h2>Service Gateway</h2><span class="tag">Direct Access</span></div>
-            <div class="link-grid rich-links">
-              <a href="/api/control/health" target="_blank" rel="noreferrer">Control API</a>
-              <a href="/api/mlflow/" target="_blank" rel="noreferrer">MLflow</a>
-              <a href="/api/tensorboard/" target="_blank" rel="noreferrer">TensorBoard</a>
-              <a href="/api/grafana/" target="_blank" rel="noreferrer">Grafana</a>
-              <a href="/api/prometheus/" target="_blank" rel="noreferrer">Prometheus</a>
-              <a href="/api/alertmanager/" target="_blank" rel="noreferrer">Alertmanager</a>
-              <a href="/api/torchserve/" target="_blank" rel="noreferrer">TorchServe Inference</a>
-              <a href="/api/torchserve-mgmt/" target="_blank" rel="noreferrer">TorchServe Mgmt</a>
-              <a href="/api/torchserve-metrics/" target="_blank" rel="noreferrer">TorchServe Metrics</a>
-              <a href="/api/minio/" target="_blank" rel="noreferrer">MinIO API</a>
-              <a href="/api/minio-console/" target="_blank" rel="noreferrer">MinIO Console</a>
-              <a href="/api/pushgateway/" target="_blank" rel="noreferrer">Pushgateway</a>
-              <a href="/api/blackbox-exporter/" target="_blank" rel="noreferrer">Blackbox</a>
-              <a href="/api/cadvisor/" target="_blank" rel="noreferrer">cAdvisor</a>
-              <a href="/api/node-exporter/" target="_blank" rel="noreferrer">Node Exporter</a>
-              <a href="/api/process-exporter/" target="_blank" rel="noreferrer">Process Exporter</a>
-              <a href="/api/postgres-exporter/" target="_blank" rel="noreferrer">Postgres Exporter</a>
-            </div>
-          </article>
         </section>
 
-        <section class="tab-pane tab-pane-grid resources-layout" id="tab-resources">
+        <section class="tab-pane tab-pane-grid resources-layout" id="tab-resources" data-content-group="Ресурсы">
           <article class="panel layout-third">
-            <div class="panel-title-row"><h2>Resource Governance</h2><span class="tag">Capacity</span></div>
+            <div class="panel-title-row"><h2>Управление ресурсами</h2><span class="tag">Емкость</span></div>
             <div class="form-grid">
-              <label>Profile<select id="resource-profile"><option value="balanced">balanced</option><option value="training">training-heavy</option><option value="inference">inference-heavy</option><option value="eco">eco mode</option></select></label>
-              <label>CPU Multiplier<input id="resource-cpu-multiplier" type="range" min="0.5" max="2" step="0.1" value="1" /></label>
-              <label>Memory Multiplier<input id="resource-mem-multiplier" type="range" min="0.5" max="2" step="0.1" value="1" /></label>
-              <label>Critical Reservation %<input id="resource-reservation" type="number" min="30" max="90" value="50" /></label>
+              <label>Профиль<select id="resource-profile"><option value="balanced">сбалансированный</option><option value="training">обучение</option><option value="inference">инференс</option><option value="eco">эко-режим</option></select></label>
+              <label>Множитель CPU<input id="resource-cpu-multiplier" type="range" min="0.5" max="2" step="0.1" value="1" /></label>
+              <label>Множитель памяти<input id="resource-mem-multiplier" type="range" min="0.5" max="2" step="0.1" value="1" /></label>
+              <label>Критический резерв %<input id="resource-reservation" type="number" min="30" max="90" value="50" /></label>
             </div>
-            <div class="inline-actions"><button id="generate-resource-plan" class="btn btn-accent" type="button">Generate Override</button><button id="copy-resource-plan" class="btn" type="button">Copy Override</button></div>
+            <div class="inline-actions"><button id="generate-resource-plan" class="btn btn-accent" type="button">Создать override</button><button id="copy-resource-plan" class="btn" type="button">Копировать override</button></div>
             <pre id="resource-override" class="code-box"></pre>
           </article>
 
           <article class="panel layout-mainwide">
-            <div class="panel-title-row"><h2>Container and Process Consumption</h2><span class="tag">Deep Monitor</span></div>
+            <div class="panel-title-row"><h2>Потребление контейнеров и процессов</h2><span class="tag">Глубокий мониторинг</span></div>
             <div class="usage-grid">
-              <div class="table-shell usage-card"><h3>Containers</h3><table><thead><tr><th>Container</th><th>CPU %</th><th>Memory MB</th><th>Net RX KB/s</th></tr></thead><tbody id="container-usage-body"></tbody></table></div>
-              <div class="table-shell usage-card"><h3>Processes</h3><table><thead><tr><th>Process</th><th>CPU %</th><th>Memory MB</th><th>Threads</th></tr></thead><tbody id="process-usage-body"></tbody></table></div>
+              <div class="table-shell usage-card"><h3>Контейнеры</h3><table><thead><tr><th>Контейнер</th><th>CPU %</th><th>Память MB</th><th>Сеть RX KB/s</th></tr></thead><tbody id="container-usage-body"></tbody></table></div>
+              <div class="table-shell usage-card"><h3>Процессы</h3><table><thead><tr><th>Процесс</th><th>CPU %</th><th>Память MB</th><th>Потоки</th></tr></thead><tbody id="process-usage-body"></tbody></table></div>
             </div>
-            <p id="usage-updated-at" class="hint">Awaiting resource metrics...</p>
+            <p id="usage-updated-at" class="hint">Ожидание метрик ресурсов...</p>
           </article>
         </section>
       </section>
     </main>
 
-    <footer class="footer"><p>Mission control keeps datasets, experiments, observability and serving in one operator surface.</p></footer>
+    <div id="workspace-file-modal" class="modal" hidden>
+      <div class="modal-backdrop" data-workspace-file-close></div>
+      <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="workspace-file-title">
+        <div class="panel-title-row">
+          <h2 id="workspace-file-title">Выбор файла</h2>
+          <button id="workspace-file-close" class="icon-btn" type="button" title="Закрыть">×</button>
+        </div>
+        <div class="toolbar-inline">
+          <input id="workspace-file-search" type="text" placeholder="Фильтр по имени или пути" />
+          <button id="workspace-file-refresh" class="btn btn-inline" type="button">Обновить</button>
+        </div>
+        <div id="workspace-file-list" class="workspace-file-list"></div>
+        <p id="workspace-file-status" class="hint">Файлы загружаются.</p>
+      </section>
+    </div>
 
     <script src="app.js"></script>
   </body>
