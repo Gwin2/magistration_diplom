@@ -54,28 +54,28 @@
       <aside class="nav-panel" id="nav-panel">
         <nav class="steps-nav" id="steps-nav">
           <p class="nav-section-title">Пайплайн обучения</p>
-          <button class="step-btn is-active" type="button" data-step="1" data-tab-target="tab-datasets">
+          <button class="step-btn is-active" type="button" data-step="1" data-tab-target="tab-datasets" aria-label="Данные" title="Данные">
             <span class="step-number">1</span>
             <span class="step-info">
               <span class="step-title">Данные</span>
               <span class="step-desc">Загрузка и подготовка</span>
             </span>
           </button>
-          <button class="step-btn" type="button" data-step="2" data-tab-target="tab-studio">
+          <button class="step-btn" type="button" data-step="2" data-tab-target="tab-studio" aria-label="Студия модели" title="Студия модели">
             <span class="step-number">2</span>
             <span class="step-info">
               <span class="step-title">Студия модели</span>
               <span class="step-desc">Архитектура и конфиг</span>
             </span>
           </button>
-          <button class="step-btn" type="button" data-step="3" data-tab-target="tab-experiments">
+          <button class="step-btn" type="button" data-step="3" data-tab-target="tab-experiments" aria-label="Эксперименты" title="Эксперименты">
             <span class="step-number">3</span>
             <span class="step-info">
               <span class="step-title">Эксперименты</span>
               <span class="step-desc">Обучение и оценка</span>
             </span>
           </button>
-          <button class="step-btn" type="button" data-step="4" data-tab-target="tab-serving">
+          <button class="step-btn" type="button" data-step="4" data-tab-target="tab-serving" aria-label="Публикация" title="Публикация">
             <span class="step-number">4</span>
             <span class="step-info">
               <span class="step-title">Публикация</span>
@@ -84,14 +84,14 @@
           </button>
 
           <p class="nav-section-title">Мониторинг</p>
-          <button class="step-btn" type="button" data-step="5" data-tab-target="tab-overview">
+          <button class="step-btn" type="button" data-step="5" data-tab-target="tab-overview" aria-label="Метрики" title="Метрики">
             <span class="step-number">5</span>
             <span class="step-info">
               <span class="step-title">Метрики</span>
               <span class="step-desc">Живой мониторинг</span>
             </span>
           </button>
-          <button class="step-btn" type="button" data-step="6" data-tab-target="tab-resources">
+          <button class="step-btn" type="button" data-step="6" data-tab-target="tab-resources" aria-label="Ресурсы" title="Ресурсы">
             <span class="step-number">6</span>
             <span class="step-info">
               <span class="step-title">Ресурсы</span>
@@ -149,35 +149,44 @@
                 </div>
               </div>
             </div>
-            <div class="summary-grid">
-              <div class="summary-card"><p class="summary-label">Датасеты</p><p id="summary-datasets" class="summary-value">0</p><p class="summary-note">зарегистрированные источники</p></div>
-              <div class="summary-card"><p class="summary-label">Конфиги</p><p id="summary-configs" class="summary-value">0</p><p class="summary-note">планы экспериментов</p></div>
-              <div class="summary-card"><p class="summary-label">Архитектуры</p><p id="summary-architectures" class="summary-value">0</p><p class="summary-note">встроенные и пользовательские</p></div>
-              <div class="summary-card"><p class="summary-label">Эксперименты</p><p id="summary-experiments" class="summary-value">0</p><p class="summary-note">локальные и MLflow</p></div>
-              <div class="summary-card"><p class="summary-label">Задачи</p><p id="summary-jobs" class="summary-value">0</p><p class="summary-note">обучение и оценка</p></div>
-              <div class="summary-card"><p class="summary-label">Активные</p><p id="summary-running" class="summary-value">0</p><p class="summary-note">фоновые процессы</p></div>
-            </div>
+            <details class="compact-details">
+              <summary>Детали проекта <span class="details-hint">сводные количества</span></summary>
+              <div class="summary-grid">
+                <div class="summary-card"><p class="summary-label">Датасеты</p><p id="summary-datasets" class="summary-value">0</p><p class="summary-note">зарегистрированные источники</p></div>
+                <div class="summary-card"><p class="summary-label">Конфиги</p><p id="summary-configs" class="summary-value">0</p><p class="summary-note">планы экспериментов</p></div>
+                <div class="summary-card"><p class="summary-label">Архитектуры</p><p id="summary-architectures" class="summary-value">0</p><p class="summary-note">встроенные и пользовательские</p></div>
+                <div class="summary-card"><p class="summary-label">Эксперименты</p><p id="summary-experiments" class="summary-value">0</p><p class="summary-note">локальные и MLflow</p></div>
+                <div class="summary-card"><p class="summary-label">Задачи</p><p id="summary-jobs" class="summary-value">0</p><p class="summary-note">обучение и оценка</p></div>
+                <div class="summary-card"><p class="summary-label">Активные</p><p id="summary-running" class="summary-value">0</p><p class="summary-note">фоновые процессы</p></div>
+              </div>
+            </details>
             <div class="subsection-head"><h3>Рекомендации системы</h3><span class="hint">Лучшие текущие запуски по mAP50, FPS и задержке</span></div>
             <div id="recommendations-list" class="recommendation-list"></div>
           </article>
 
           <article class="panel panel-compact layout-side">
             <div class="panel-title-row"><h2>Живые метрики</h2><span class="tag">Prometheus</span></div>
-            <div class="kpi-grid">
+            <div class="kpi-grid kpi-grid-primary">
               <div class="kpi-card" data-metric="map50"><p class="kpi-label">mAP50</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
-              <div class="kpi-card" data-metric="map75"><p class="kpi-label">mAP75</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
               <div class="kpi-card" data-metric="latency"><p class="kpi-label">Задержка (мс)</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
               <div class="kpi-card" data-metric="fps"><p class="kpi-label">FPS</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
               <div class="kpi-card" data-metric="health"><p class="kpi-label">Здоровье сервисов</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
-              <div class="kpi-card" data-metric="host_cpu"><p class="kpi-label">CPU хоста %</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
-              <div class="kpi-card" data-metric="host_mem"><p class="kpi-label">Память хоста %</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
-              <div class="kpi-card" data-metric="firing_alerts"><p class="kpi-label">Активные алерты</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
             </div>
+            <details class="compact-details">
+              <summary>Системные детали <span class="details-hint">ещё 4 показателя</span></summary>
+              <div class="kpi-grid kpi-grid-secondary">
+                <div class="kpi-card" data-metric="map75"><p class="kpi-label">mAP75</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
+                <div class="kpi-card" data-metric="host_cpu"><p class="kpi-label">CPU хоста %</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
+                <div class="kpi-card" data-metric="host_mem"><p class="kpi-label">Память хоста %</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
+                <div class="kpi-card" data-metric="firing_alerts"><p class="kpi-label">Активные алерты</p><p class="kpi-value">--</p><svg viewBox="0 0 120 36" class="sparkline"><path d=""></path></svg></div>
+              </div>
+            </details>
           </article>
 
           <article class="panel span-all layout-wide">
-            <div class="panel-title-row">
-              <h2>Дашборды</h2>
+            <div class="panel-title-row"><h2>Дашборды</h2><span class="tag">по запросу</span></div>
+            <details class="compact-details dashboard-details">
+              <summary>Открыть мониторинг <span class="details-hint">Grafana · 3 представления</span></summary>
               <div class="dashboard-toolbar">
                 <div class="dashboard-tabs" id="dashboard-tabs">
                   <button class="dash-tab is-active" type="button" data-src="/api/grafana/d/uav-system-overview/uav-system-overview?orgId=1&kiosk">Система</button>
@@ -190,11 +199,11 @@
                   <span id="dashboard-status" class="hint dash-status">Загрузка дашборда...</span>
                 </div>
               </div>
-            </div>
-            <div class="dashboard-shell" id="dashboard-shell">
-              <div id="dashboard-loader" class="dashboard-loader">Загрузка дашборда...</div>
-              <iframe id="dashboard-frame" title="Дашборд Grafana" loading="lazy"></iframe>
-            </div>
+              <div class="dashboard-shell" id="dashboard-shell">
+                <div id="dashboard-loader" class="dashboard-loader">Загрузка дашборда...</div>
+                <iframe id="dashboard-frame" title="Дашборд Grafana" loading="lazy"></iframe>
+              </div>
+            </details>
           </article>
         </section>
 
@@ -426,7 +435,10 @@
 
           <article class="panel span-all layout-wide">
             <div class="panel-title-row"><h2>TensorBoard</h2><div class="dashboard-meta"><a href="/api/tensorboard/" target="_blank" rel="noreferrer">Открыть полностью</a><button id="tensorboard-reload" class="btn btn-inline" type="button">Обновить</button><span id="tensorboard-status" class="hint">Проверка TensorBoard...</span></div></div>
-            <div class="dashboard-shell" id="tensorboard-shell"><div id="tensorboard-loader" class="dashboard-loader">Загрузка TensorBoard...</div><iframe id="tensorboard-frame" title="TensorBoard" loading="lazy"></iframe></div>
+            <details class="compact-details dashboard-details">
+              <summary>Открыть TensorBoard <span class="details-hint">подробные графики обучения</span></summary>
+              <div class="dashboard-shell" id="tensorboard-shell"><div id="tensorboard-loader" class="dashboard-loader">Загрузка TensorBoard...</div><iframe id="tensorboard-frame" title="TensorBoard" loading="lazy"></iframe></div>
+            </details>
           </article>
         </section>
 

@@ -8,12 +8,17 @@ document.addEventListener('DOMContentLoaded', () => {
     theme: 'light',
     training: false,
     datasets: [],
-    models: [],
+    configs: [],
+    architectures: [],
+    jobs: [],
     experiments: [],
+    recommendations: [],
+    models: [],
     workspaceFilePicker: { kind: 'any', targetId: '', items: [] },
     contentsCollapsed: new Set()
   };
   const API_BASE = '/api/control';
+  const PROMETHEUS_BASE = '/api/prometheus';
 
   // DOM Elements
   const navPanel = document.getElementById('nav-panel');
@@ -34,10 +39,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function init() {
     setupNavigation();
     setupContentsNavigation();
+    setupPanelReordering();
     setupThemeToggle();
     setupStepNavigation();
     setupForms();
-    void loadDatasets();
+    void loadCatalog();
+    void loadLiveMetrics();
+    window.setInterval(() => void loadCatalog(), 15000);
+    window.setInterval(() => void loadLiveMetrics(), 10000);
     loadSavedState();
     goToStep(state.currentStep);
     updateUI();
@@ -105,10 +114,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const heading = panel.querySelector('.panel-title-row h2, .panel-title-row h3, .panel-title-row h4');
         if (!heading) return null;
         if (!panel.id) panel.id = `content-${pane.id}-${index + 1}`;
+        const subitems = [
+          ...panel.querySelectorAll(':scope > .subsection-head'),
+          ...panel.querySelectorAll(':scope > details')
+        ].map((section, sectionIndex) => {
+          const sectionHeading = section.querySelector(':scope > h3, :scope > h4, :scope > summary');
+          if (!sectionHeading) return null;
+          if (!section.id) section.id = `${panel.id}-sub-${sectionIndex + 1}`;
+          return {
+            id: section.id,
+            label: section.matches('details')
+              ? sectionHeading.firstChild?.textContent.trim() || sectionHeading.textContent.trim()
+              : sectionHeading.textContent.trim()
+          };
+        }).filter(Boolean);
         return {
           id: panel.id,
           label: heading.textContent.trim(),
-          group: pane.dataset.contentGroup || pane.id
+          group: pane.dataset.contentGroup || pane.id,
+          subitems
         };
       })
       .filter(Boolean);
@@ -145,6 +169,20 @@ document.addEventListener('DOMContentLoaded', () => {
         button.dataset.contentTarget = item.id;
         button.textContent = item.label;
         itemsEl.append(button);
+
+        if (item.subitems.length) {
+          const subitemsEl = document.createElement('div');
+          subitemsEl.className = 'contents-subitems';
+          item.subitems.forEach(subitem => {
+            const subbutton = document.createElement('button');
+            subbutton.type = 'button';
+            subbutton.className = 'contents-subitem';
+            subbutton.dataset.contentTarget = subitem.id;
+            subbutton.textContent = subitem.label;
+            subitemsEl.append(subbutton);
+          });
+          itemsEl.append(subitemsEl);
+        }
       });
       section.append(itemsEl);
       contentsList.append(section);
@@ -163,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const items = getContentItems();
     if (!items.length || !window.IntersectionObserver) return;
 
-    const buttons = [...contentsList.querySelectorAll('.contents-item')];
+    const buttons = [...contentsList.querySelectorAll('.contents-item, .contents-subitem')];
     contentsObserver = new IntersectionObserver(entries => {
       const visible = entries
         .filter(entry => entry.isIntersecting)
@@ -174,9 +212,125 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }, { rootMargin: '-72px 0px -55% 0px', threshold: [0, 0.25, 0.75] });
 
-    items.forEach(item => {
+    items.flatMap(item => [item, ...item.subitems]).forEach(item => {
       const target = document.getElementById(item.id);
       if (target) contentsObserver.observe(target);
+    });
+  }
+
+  function getPanelKey(pane, panel) {
+    if (panel.dataset.panelKey) return panel.dataset.panelKey;
+    const heading = panel.querySelector(':scope > .panel-title-row h2, :scope > .panel-title-row h3, :scope > .panel-title-row h4');
+    const title = heading?.textContent.trim() || panel.className;
+    panel.dataset.panelKey = `${pane.id}:${encodeURIComponent(title.toLowerCase())}`;
+    return panel.dataset.panelKey;
+  }
+
+  function readPanelOrders() {
+    try {
+      const value = JSON.parse(localStorage.getItem('nn_trainer_panel_order') || '{}');
+      return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    } catch (_error) {
+      return {};
+    }
+  }
+
+  function savePanelOrder(pane) {
+    const orders = readPanelOrders();
+    orders[pane.id] = [...pane.querySelectorAll(':scope > .panel')]
+      .map(panel => getPanelKey(pane, panel));
+    localStorage.setItem('nn_trainer_panel_order', JSON.stringify(orders));
+  }
+
+  function applyPanelOrder(pane, order) {
+    if (!Array.isArray(order) || !order.length) return;
+    const panels = [...pane.querySelectorAll(':scope > .panel')];
+    const byKey = new Map(panels.map(panel => [getPanelKey(pane, panel), panel]));
+    order.forEach(key => {
+      const panel = byKey.get(key);
+      if (panel) pane.append(panel);
+    });
+  }
+
+  function movePanel(panel, direction) {
+    const pane = panel.parentElement;
+    if (!pane?.classList.contains('tab-pane')) return;
+    const panels = [...pane.querySelectorAll(':scope > .panel')];
+    const index = panels.indexOf(panel);
+    const target = panels[index + direction];
+    if (!target) return;
+    if (direction < 0) pane.insertBefore(panel, target);
+    else pane.insertBefore(target, panel);
+    savePanelOrder(pane);
+    renderContentsMenu();
+    observeContentPanels();
+  }
+
+  function setupPanelReordering() {
+    const orders = readPanelOrders();
+    let draggedPanel = null;
+    let draggedPane = null;
+
+    tabPanes.forEach(pane => {
+      applyPanelOrder(pane, orders[pane.id]);
+      const panels = [...pane.querySelectorAll(':scope > .panel')];
+      panels.forEach(panel => {
+        getPanelKey(pane, panel);
+        const titleRow = panel.querySelector(':scope > .panel-title-row');
+        if (!titleRow || titleRow.querySelector('.panel-drag-handle')) return;
+
+        const handle = document.createElement('button');
+        handle.type = 'button';
+        handle.className = 'panel-drag-handle';
+        handle.draggable = true;
+        handle.title = 'Переместить блок';
+        handle.setAttribute('aria-label', 'Переместить блок');
+        handle.textContent = '⠿';
+        titleRow.append(handle);
+
+        handle.addEventListener('dragstart', event => {
+          draggedPanel = panel;
+          draggedPane = pane;
+          panel.classList.add('is-dragging');
+          event.dataTransfer.effectAllowed = 'move';
+          event.dataTransfer.setData('text/plain', getPanelKey(pane, panel));
+        });
+
+        handle.addEventListener('dragend', () => {
+          panel.classList.remove('is-dragging');
+          panels.forEach(item => item.classList.remove('is-drop-target'));
+          draggedPanel = null;
+          draggedPane = null;
+        });
+
+        handle.addEventListener('keydown', event => {
+          if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+          event.preventDefault();
+          movePanel(panel, event.key === 'ArrowUp' ? -1 : 1);
+        });
+
+        panel.addEventListener('dragover', event => {
+          if (!draggedPanel || draggedPane !== pane || draggedPanel === panel) return;
+          event.preventDefault();
+          panels.forEach(item => item.classList.remove('is-drop-target'));
+          panel.classList.add('is-drop-target');
+          event.dataTransfer.dropEffect = 'move';
+        });
+
+        panel.addEventListener('dragleave', () => panel.classList.remove('is-drop-target'));
+        panel.addEventListener('drop', event => {
+          if (!draggedPanel || draggedPane !== pane || draggedPanel === panel) return;
+          event.preventDefault();
+          const bounds = panel.getBoundingClientRect();
+          const insertBefore = event.clientY < bounds.top + bounds.height / 2;
+          if (insertBefore) pane.insertBefore(draggedPanel, panel);
+          else pane.insertBefore(draggedPanel, panel.nextSibling);
+          savePanelOrder(pane);
+          renderContentsMenu();
+          observeContentPanels();
+          panel.classList.remove('is-drop-target');
+        });
+      });
     });
   }
 
@@ -272,6 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('dataset-import-path-btn')?.addEventListener('click', handleDatasetImportPath);
     document.getElementById('dataset-register-btn')?.addEventListener('click', handleDatasetRegister);
     document.getElementById('datasets-refresh')?.addEventListener('click', () => void loadDatasets());
+    document.getElementById('experiments-refresh')?.addEventListener('click', () => void loadCatalog());
     document.getElementById('dataset-search')?.addEventListener('input', renderDatasets);
     
     // Architecture
@@ -478,15 +633,16 @@ document.addEventListener('DOMContentLoaded', () => {
       return `${item.name} ${item.path}`.toLowerCase().includes(term);
     });
     if (!items.length) {
-      list.innerHTML = '<p class="empty-state">Файлы не найдены.</p>';
+      setStableMarkup(list, '<p class="empty-state">Файлы не найдены.</p>');
       return;
     }
-    list.innerHTML = items.map(item => `
+    const markup = items.map(item => `
       <button class="file-choice" type="button" data-workspace-file="${escapeHtml(item.path)}">
         <span><strong>${escapeHtml(item.name)}</strong><br>${escapeHtml(item.path)}</span>
         <small>${formatBytes(item.size_bytes)}</small>
       </button>
     `).join('');
+    if (!setStableMarkup(list, markup)) return;
     list.querySelectorAll('[data-workspace-file]').forEach(button => {
       button.addEventListener('click', () => {
         selectWorkspaceFile(button.getAttribute('data-workspace-file') || '');
@@ -573,6 +729,191 @@ document.addEventListener('DOMContentLoaded', () => {
     return response.json();
   }
 
+  function setStableText(elementOrId, value) {
+    const element = typeof elementOrId === 'string'
+      ? document.getElementById(elementOrId)
+      : elementOrId;
+    if (!element) return;
+    const nextValue = String(value ?? '--');
+    if (element.textContent !== nextValue) element.textContent = nextValue;
+  }
+
+  function setStableMarkup(element, markup) {
+    if (!element || element.dataset.renderedMarkup === markup) return false;
+    element.innerHTML = markup;
+    element.dataset.renderedMarkup = markup;
+    return true;
+  }
+
+  function formatMetric(value, digits = 2) {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return '--';
+    return numericValue.toLocaleString('ru-RU', {
+      maximumFractionDigits: digits,
+      minimumFractionDigits: digits
+    });
+  }
+
+  function updateKpi(metric, value, digits = 2) {
+    const card = document.querySelector(`[data-metric="${metric}"]`);
+    if (!card) return;
+    setStableText(card.querySelector('.kpi-value'), formatMetric(value, digits));
+  }
+
+  async function loadCatalog() {
+    try {
+      const [payload, servingPayload] = await Promise.all([
+        apiJson('/catalog'),
+        apiJson('/torchserve/models').catch(() => null)
+      ]);
+      state.datasets = Array.isArray(payload.datasets) ? payload.datasets : [];
+      state.configs = Array.isArray(payload.configs) ? payload.configs : [];
+      state.architectures = Array.isArray(payload.architectures) ? payload.architectures : [];
+      state.jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
+      state.experiments = Array.isArray(payload.experiments) ? payload.experiments : [];
+      state.recommendations = Array.isArray(payload.recommendations) ? payload.recommendations : [];
+      if (Array.isArray(servingPayload?.models)) state.models = servingPayload.models;
+      syncDatasetControls();
+      renderDatasets();
+      renderOverview(payload);
+      renderExperiments(state.experiments);
+      renderJobs(state.jobs);
+    } catch (_error) {
+      // The UI keeps the last known values when monitoring is temporarily unavailable.
+    }
+  }
+
+  function renderOverview(payload) {
+    const datasets = Array.isArray(payload.datasets) ? payload.datasets : [];
+    const configs = Array.isArray(payload.configs) ? payload.configs : [];
+    const architectures = Array.isArray(payload.architectures) ? payload.architectures : [];
+    const jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
+    const experiments = Array.isArray(payload.experiments) ? payload.experiments : [];
+    const runningJobs = jobs.filter(job => job.status === 'running').length;
+    const best = experiments.reduce((current, item) => {
+      if (!current || Number(item.map_50 || 0) > Number(current.map_50 || 0)) return item;
+      return current;
+    }, null);
+
+    setStableText('summary-datasets', datasets.length);
+    setStableText('summary-configs', configs.length);
+    setStableText('summary-architectures', architectures.length);
+    setStableText('summary-experiments', experiments.length);
+    setStableText('summary-jobs', jobs.length);
+    setStableText('summary-running', runningJobs);
+    setStableText('hero-tracked-runs', experiments.length);
+    setStableText('hero-running-jobs', runningJobs);
+    setStableText('hero-best-map50', best ? formatMetric(best.map_50, 3) : '--');
+    setStableText('hero-served-models', state.models.length);
+
+    if (best) {
+      updateKpi('map50', best.map_50, 3);
+      updateKpi('map75', best.map_75, 3);
+      updateKpi('latency', best.latency_ms);
+      updateKpi('fps', best.fps);
+    } else {
+      updateKpi('map50', Number.NaN, 3);
+      updateKpi('map75', Number.NaN, 3);
+      updateKpi('latency', Number.NaN);
+      updateKpi('fps', Number.NaN);
+    }
+    renderRecommendations(payload.recommendations);
+  }
+
+  function renderRecommendations(items) {
+    const list = document.getElementById('recommendations-list');
+    if (!list) return;
+    const recommendations = Array.isArray(items) ? items : [];
+    const markup = recommendations.length
+      ? recommendations.map((item, index) => `
+          <article class="recommendation-card">
+            <div class="recommendation-card-head">
+              <strong>${index + 1}. ${escapeHtml(item.run_name || item.key)}</strong>
+              <span class="tag">${formatMetric(item.score, 3)}</span>
+            </div>
+            <span class="recommendation-summary">${escapeHtml(item.summary || '')}</span>
+          </article>
+        `).join('')
+      : '<p class="empty-state">Пока нет завершенных запусков для рекомендаций.</p>';
+    setStableMarkup(list, markup);
+  }
+
+  function renderExperiments(items) {
+    const body = document.getElementById('experiments-body');
+    if (!body) return;
+    const experiments = Array.isArray(items) ? items : [];
+    const markup = experiments.length
+      ? experiments.map(item => {
+          const tags = (item.tags || []).map(tag => `<span>${escapeHtml(tag)}</span>`).join('');
+          return `
+            <tr>
+              <td><input type="checkbox" aria-label="Сравнить ${escapeHtml(item.run_name)}" /></td>
+              <td><strong>${escapeHtml(item.run_name || item.key)}</strong></td>
+              <td>${escapeHtml(item.model_name || 'unknown')}</td>
+              <td><span class="status-chip status-${escapeHtml(item.status || 'unknown')}">${escapeHtml(item.status || '—')}</span></td>
+              <td>${formatMetric(item.map_50, 3)}</td>
+              <td>${formatMetric(item.fps)}</td>
+              <td>${formatMetric(item.latency_ms)} мс</td>
+              <td>${item.rating ? `${escapeHtml(item.rating)}/5` : '—'}</td>
+              <td><div class="table-tags">${tags || '<span>—</span>'}</div></td>
+            </tr>
+          `;
+        }).join('')
+      : '<tr><td colspan="9" class="empty-state">Запуски пока не найдены.</td></tr>';
+    setStableMarkup(body, markup);
+  }
+
+  function renderJobs(items) {
+    const list = document.getElementById('job-list');
+    if (!list) return;
+    const jobs = Array.isArray(items) ? items : [];
+    const markup = jobs.length
+      ? jobs.map(job => `
+          <article class="job-card">
+            <div class="job-card-head">
+              <strong>${escapeHtml(job.run_name || job.id)}</strong>
+              <span class="status-chip status-${escapeHtml(job.status || 'unknown')}">${escapeHtml(job.status || '—')}</span>
+            </div>
+            <span class="job-card-meta">${escapeHtml(job.kind || 'job')} · ${escapeHtml(job.experiment_name || 'без эксперимента')}</span>
+          </article>
+        `).join('')
+      : '<p class="empty-state">Активных задач нет.</p>';
+    setStableMarkup(list, markup);
+  }
+
+  async function queryPrometheus(query) {
+    const params = new URLSearchParams({ query });
+    const response = await fetch(`${PROMETHEUS_BASE}/api/v1/query?${params}`);
+    if (!response.ok) throw new Error(`Prometheus ${response.status}`);
+    const payload = await response.json();
+    const rawValue = payload.data?.result?.[0]?.value?.[1];
+    const value = Number(rawValue);
+    return Number.isFinite(value) ? value : null;
+  }
+
+  async function loadLiveMetrics() {
+    const queries = {
+      health: 'avg(probe_success{job="blackbox-http"}) * 100',
+      host_cpu: '100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)',
+      host_mem: '(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100',
+      firing_alerts: 'sum(ALERTS{alertstate="firing"})'
+    };
+    await Promise.all(Object.entries(queries).map(async ([metric, query]) => {
+      try {
+        const value = await queryPrometheus(query);
+        if (value !== null) {
+          updateKpi(metric, value, metric === 'firing_alerts' ? 0 : 1);
+          if (metric === 'health') {
+            setStableText('hero-health-label', value >= 99 ? 'Все сервисы в норме' : 'Есть отклонения');
+            setStableText('hero-health-note', `Доступность сервисов: ${formatMetric(value, 1)}%`);
+          }
+        }
+      } catch (_error) {
+        // Keep the last value instead of flashing the card back to a placeholder.
+      }
+    }));
+  }
+
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, char => ({
       '&': '&amp;',
@@ -615,11 +956,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const select = document.getElementById('constructor-dataset');
     if (select) {
       const selected = select.value;
-      select.innerHTML = '<option value="">Авто / нет</option>' + state.datasets.map(dataset => (
+      const markup = '<option value="">Авто / нет</option>' + state.datasets.map(dataset => (
         `<option value="${escapeHtml(dataset.id)}">${escapeHtml(dataset.name)}</option>`
       )).join('');
-      if (state.datasets.some(dataset => dataset.id === selected)) {
-        select.value = selected;
+      if (select.dataset.renderedMarkup !== markup) {
+        select.innerHTML = markup;
+        select.dataset.renderedMarkup = markup;
+        if (state.datasets.some(dataset => dataset.id === selected)) {
+          select.value = selected;
+        }
       }
     }
     updateTrainingSummary();
@@ -642,26 +987,39 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     if (!items.length) {
-      list.innerHTML = '<p class="empty-state">Датасеты не найдены.</p>';
+      setStableMarkup(list, '<p class="empty-state">Датасеты не найдены.</p>');
       return;
     }
 
-    list.innerHTML = items.map(dataset => {
-      const tags = (dataset.tags || []).map(tag => `<span>${escapeHtml(tag)}</span>`).join('');
+    const markup = items.map(dataset => {
+      const tags = (dataset.tags || []).map(tag => `
+        <button class="dataset-tag" type="button" data-dataset-filter-tag="${escapeHtml(tag)}">
+          ${escapeHtml(tag)}
+        </button>
+      `).join('');
       const description = dataset.description || 'Описание не задано.';
+      const sourceKind = String(dataset.path || '').includes('/uploads/') ? 'upload' : 'workspace';
+      const sourceLabel = sourceKind === 'upload' ? 'Загрузка' : 'Workspace';
       return `
         <article class="dataset-card">
           <div class="dataset-card-head">
-            <h3>${escapeHtml(dataset.name)}</h3>
+            <div class="dataset-card-title">
+              <span class="dataset-source-icon source-${sourceKind}" aria-hidden="true">${sourceKind === 'upload' ? '↑' : '⌁'}</span>
+              <h3>${escapeHtml(dataset.name)}</h3>
+            </div>
             <span>${escapeHtml(String(dataset.file_count || 0))} файлов</span>
           </div>
-          <p class="dataset-path">${escapeHtml(dataset.path)}</p>
-          <p class="dataset-description">${escapeHtml(description)}</p>
-          <div class="dataset-tags">${tags || '<span>без тегов</span>'}</div>
-          <div class="dataset-meta">
-            <span>${formatBytes(dataset.size_bytes)}</span>
-            <span>${dataset.updated_at ? new Date(dataset.updated_at).toLocaleString('ru-RU') : 'без даты'}</span>
-          </div>
+          <span class="dataset-source source-${sourceKind}">${sourceLabel}</span>
+          <div class="dataset-tags">${tags || '<span class="dataset-tag-empty">без тегов</span>'}</div>
+          <details class="dataset-card-details">
+            <summary>Подробнее</summary>
+            <p class="dataset-path">${escapeHtml(dataset.path)}</p>
+            <p class="dataset-description">${escapeHtml(description)}</p>
+            <div class="dataset-meta">
+              <span>${formatBytes(dataset.size_bytes)}</span>
+              <span>${dataset.updated_at ? new Date(dataset.updated_at).toLocaleString('ru-RU') : 'без даты'}</span>
+            </div>
+          </details>
           <div class="inline-actions">
             <a class="btn btn-inline" href="${API_BASE}/datasets/${encodeURIComponent(dataset.id)}/download" target="_blank" rel="noreferrer">Скачать</a>
             <button class="btn btn-inline" type="button" data-dataset-edit="${escapeHtml(dataset.id)}">Редактировать</button>
@@ -670,6 +1028,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </article>
       `;
     }).join('');
+    if (!setStableMarkup(list, markup)) return;
 
     list.querySelectorAll('[data-dataset-edit]').forEach(button => {
       button.addEventListener('click', () => {
@@ -682,6 +1041,16 @@ document.addEventListener('DOMContentLoaded', () => {
       button.addEventListener('click', () => {
         const datasetId = button.getAttribute('data-dataset-unregister');
         if (datasetId) void unregisterDataset(datasetId);
+      });
+    });
+
+    list.querySelectorAll('[data-dataset-filter-tag]').forEach(button => {
+      button.addEventListener('click', () => {
+        const search = document.getElementById('dataset-search');
+        if (!search) return;
+        search.value = button.getAttribute('data-dataset-filter-tag') || '';
+        renderDatasets();
+        search.focus();
       });
     });
   }
@@ -956,11 +1325,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (preview) {
       preview.innerHTML = `
-        <div style="text-align: center;">
-          <div style="font-size: 1rem; margin-bottom: 1rem; color: var(--text-secondary);">Схема модели</div>
-          <div><strong>${name}</strong></div>
-          <div style="color: var(--text-secondary);">${task} | ${backbone}</div>
-          <div style="color: var(--text-muted); font-size: 0.85rem;">Вход: ${inputSize}x${inputSize}</div>
+        <div class="architecture-preview">
+          <div class="architecture-preview-title">Схема модели</div>
+          <strong>${name}</strong>
+          <div class="architecture-preview-meta">${task} | ${backbone}</div>
+          <div class="architecture-preview-note">Вход: ${inputSize}x${inputSize}</div>
         </div>
       `;
     }
@@ -1121,13 +1490,11 @@ class ${name.replace(/\s+/g, '')}(nn.Module):
     const sourceName = imagePath || fileInput.files[0].name;
     if (outputEl) {
       outputEl.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 1rem;">
-          <div>
-            <div><strong>Результат инференса</strong></div>
-            <div style="color: var(--text-secondary);">Источник: ${escapeHtml(sourceName)}</div>
-            <div style="color: var(--text-secondary);">Предсказание: класс A (уверенность 95.2%)</div>
-            <div style="color: var(--text-muted); font-size: 0.85rem;">Задержка: 12 мс</div>
-          </div>
+        <div class="inference-summary">
+          <strong>Результат инференса</strong>
+          <div class="inference-summary-meta">Источник: ${escapeHtml(sourceName)}</div>
+          <div class="inference-summary-meta">Предсказание: класс A (уверенность 95.2%)</div>
+          <div class="inference-summary-note">Задержка: 12 мс</div>
         </div>
       `;
     }
