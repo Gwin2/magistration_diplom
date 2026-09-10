@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 # Disable Python bytecode generation and enable unbuffered output. Increase
 # default pip timeouts and retries to make network operations more resilient.
