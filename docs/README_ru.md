@@ -7,6 +7,7 @@
 | Документ | Описание | Для кого |
 |----------|----------|----------|
 | [Развёртывание и git-автоматизация](deployment_ru.md) | Настройка окружения, CI/CD, скрипты деплоя | DevOps, разработчики |
+| [CI/CD и диагностика](ci_cd_ru.md) | Gates, отчёты, security scan и выпуск Docker-образов | DevOps, разработчики |
 | [MLOps кластер](mlops_cluster_ru.md) | Архитектура MLOps платформы, сервисы, интеграции | ML Engineers, DevOps |
 | [Grafana Web View](grafana_web_view_ru.md) | Дашборды мониторинга, метрики, алертинг | Все пользователи |
 | [Mission Control UI](ui_control_center_ru.md) | Руководство по UI, 8 шагов обучения | Исследователи, пользователи |

@@ -72,7 +72,6 @@ docker compose up -d --build
 
 ## CI
 
-В репозитории настроен GitHub Actions workflow:
+Полный контур CI/CD и runbook диагностики описан в [ci_cd_ru.md](ci_cd_ru.md).
 
-- lint: `ruff check`, `ruff format --check`
-- tests: `pytest`
+Коротко: обязательные gates проверяют Ruff, pytest с coverage/JUnit, UI, Compose, Kubernetes и Trivy. CodeQL работает отдельным workflow, а advisory-отчёты `ruff format`, `mypy` и `pip-audit` сохраняются артефактом. Теги `vX.Y.Z` публикуют три Docker-образа в GHCR.

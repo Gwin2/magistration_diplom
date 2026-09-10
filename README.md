@@ -241,8 +241,13 @@ pytest
 node --check ui/app.js
 
 # Docker Compose валидация
-docker compose config
+docker compose --env-file .env.example config --quiet
+
+# Все YAML, включая Kubernetes и GitHub Actions
+python -B scripts/ci/validate_yaml.py
 ```
+
+CI дополнительно проверяет Kubernetes через Kustomize/kubeconform, ищет уязвимости Trivy, запускает CodeQL для Python/JavaScript и сохраняет coverage/JUnit и advisory-диагностику как артефакты. Полный runbook: [CI/CD и диагностика](docs/ci_cd_ru.md).
 
 ### Pre-commit хуки
 
