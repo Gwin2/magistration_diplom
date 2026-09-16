@@ -9,9 +9,9 @@ from typing import Annotated, Any
 
 import uvicorn
 import yaml
-from fastapi import FastAPI, File, Form, HTTPException, Path, Query, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Path, Query, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from uav_vit.control.architecture_constructor import (
@@ -19,6 +19,7 @@ from uav_vit.control.architecture_constructor import (
     list_constructor_catalog,
     recommend_blueprint,
 )
+from uav_vit.control.auth import SESSION_COOKIE, AuthStore
 from uav_vit.control.exceptions import handle_workspace_errors
 from uav_vit.control.mlops import MlflowBridge, TensorBoardManager, TorchServeBridge
 from uav_vit.control.state import ControlStateStore, slugify
@@ -85,6 +86,28 @@ class TorchServeRegisterPayload(BaseModel):
     synchronous: bool = True
 
 
+class LoginPayload(BaseModel):
+    username: str
+    password: str
+
+
+class UserCreatePayload(BaseModel):
+    username: str
+    password: str
+    role: str = "user"
+
+
+class UserUpdatePayload(BaseModel):
+    username: str | None = None
+    password: str | None = None
+    role: str | None = None
+
+
+class PasswordChangePayload(BaseModel):
+    current_password: str
+    new_password: str
+
+
 _FILE_PICKER_EXTENSIONS = {
     "dataset_archive": (".zip", ".tar", ".tar.gz", ".tgz", ".gz"),
     "image": (".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"),
@@ -107,6 +130,7 @@ _FILE_PICKER_SKIP_DIRS = {
 
 def create_app() -> FastAPI:
     store = ControlStateStore()
+    auth = AuthStore(store.state_dir)
     workspace = WorkspaceService(store)
     mlflow = MlflowBridge()
     tensorboard = TensorBoardManager(store)
@@ -134,6 +158,115 @@ def create_app() -> FastAPI:
     app.state.mlflow = mlflow
     app.state.tensorboard = tensorboard
     app.state.torchserve = torchserve
+    app.state.auth = auth
+
+    @app.middleware("http")
+    async def require_auth(request: Request, call_next):  # type: ignore[no-untyped-def]
+        public_paths = {"/health", "/auth/login", "/auth/logout", "/auth/me"}
+        if request.method == "OPTIONS" or request.url.path in public_paths:
+            return await call_next(request)
+        user = auth.current_user(request.cookies.get(SESSION_COOKIE))
+        if not user:
+            return JSONResponse({"detail": "Требуется вход."}, status_code=401)
+        request.state.user = user
+        return await call_next(request)
+
+    def current_user(request: Request) -> dict[str, Any]:
+        user = getattr(request.state, "user", None)
+        if not user:
+            user = auth.current_user(request.cookies.get(SESSION_COOKIE))
+        if not user:
+            raise HTTPException(status_code=401, detail="Требуется вход.")
+        return user
+
+    def admin_user(request: Request) -> dict[str, Any]:
+        user = current_user(request)
+        if user["role"] != "admin":
+            raise HTTPException(status_code=403, detail="Доступ только для администратора.")
+        return user
+
+    @app.post("/auth/login")
+    def login(payload: LoginPayload, response: Response) -> dict[str, Any]:
+        user = auth.authenticate(payload.username, payload.password)
+        if not user:
+            raise HTTPException(status_code=401, detail="Неверный логин или пароль.")
+        response.set_cookie(
+            SESSION_COOKIE,
+            auth.create_session(user["username"]),
+            max_age=auth.session_ttl,
+            httponly=True,
+            samesite="lax",
+            path="/",
+        )
+        return {"user": user}
+
+    @app.get("/auth/me")
+    def me(request: Request) -> dict[str, Any]:
+        return {"user": current_user(request)}
+
+    @app.post("/auth/logout")
+    def logout(request: Request, response: Response) -> dict[str, bool]:
+        auth.revoke_session(request.cookies.get(SESSION_COOKIE))
+        response.delete_cookie(SESSION_COOKIE, path="/")
+        return {"logged_out": True}
+
+    @app.get("/auth/users")
+    def list_users(request: Request) -> dict[str, Any]:
+        admin_user(request)
+        return {"items": auth.list_users()}
+
+    @app.post("/auth/users")
+    def create_user(payload: UserCreatePayload, request: Request) -> dict[str, Any]:
+        admin_user(request)
+        try:
+            user = auth.create_user(payload.username, payload.password, payload.role)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return {"user": user, "items": auth.list_users()}
+
+    @app.put("/auth/users/{username}")
+    def update_user(
+        username: str,
+        payload: UserUpdatePayload,
+        request: Request,
+    ) -> dict[str, Any]:
+        admin = admin_user(request)
+        try:
+            current = auth.current_user(request.cookies.get(SESSION_COOKIE))
+            requested_role = payload.role
+            if username == admin["username"] and requested_role == "user":
+                raise ValueError("Нельзя снять роль с текущего администратора.")
+            user = auth.update_user(
+                username,
+                new_username=payload.username,
+                password=payload.password,
+                role=requested_role,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if payload.password and (not current or current["username"] != user["username"]):
+            auth.revoke_user_sessions(user["username"])
+        return {"user": user, "items": auth.list_users()}
+
+    @app.delete("/auth/users/{username}")
+    def delete_user(username: str, request: Request) -> dict[str, Any]:
+        admin = admin_user(request)
+        if username.lower() == admin["username"]:
+            raise HTTPException(status_code=400, detail="Нельзя удалить текущего администратора.")
+        try:
+            auth.delete_user(username)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return {"items": auth.list_users()}
+
+    @app.post("/auth/password")
+    def change_password(payload: PasswordChangePayload, request: Request) -> dict[str, bool]:
+        user = current_user(request)
+        try:
+            auth.change_password(user["username"], payload.current_password, payload.new_password)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return {"changed": True}
 
     @app.get("/health")
     def health() -> dict[str, Any]:
@@ -511,7 +644,10 @@ def _list_workspace_files(
 
     for directory, dirnames, filenames in os.walk(root):
         dirnames[:] = [
-            name for name in dirnames if name not in _FILE_PICKER_SKIP_DIRS and not name.startswith(".")
+            name
+            for name in dirnames
+            if name not in _FILE_PICKER_SKIP_DIRS
+            and not name.startswith(".")
         ]
         current = FilesystemPath(directory)
         for filename in filenames:

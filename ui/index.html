@@ -11,10 +11,24 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20260916-permanent-delete-v1" />
   </head>
-  <body data-theme="minimal" data-motion="on" data-density="comfortable">
+  <body data-theme="light" data-motion="on" data-density="comfortable">
     <div class="gradient-bg"></div>
+
+    <div id="auth-gate" class="auth-gate" aria-live="polite">
+      <section class="auth-card" aria-labelledby="auth-title">
+        <div class="auth-brand"><span class="status-dot status-ready"></span><strong>NN Trainer</strong></div>
+        <h1 id="auth-title">Вход в систему</h1>
+        <p class="auth-subtitle">Введите логин и пароль для продолжения</p>
+        <form id="login-form" class="auth-form">
+          <label>Логин<input id="login-username" name="username" type="text" autocomplete="username" required autofocus /></label>
+          <label>Пароль<input id="login-password" name="password" type="password" autocomplete="current-password" required /></label>
+          <button class="btn btn-primary" type="submit">Войти</button>
+          <p id="login-status" class="hint" role="alert"></p>
+        </form>
+      </section>
+    </div>
 
     <header class="app-header">
       <div class="header-left">
@@ -26,6 +40,19 @@
         <span class="status-text">Готово</span>
       </div>
       <div class="header-actions">
+        <div id="auth-user" class="auth-user" hidden>
+          <span id="auth-user-name"></span>
+          <button id="auth-logout" class="btn btn-inline" type="button">Выйти</button>
+        </div>
+        <button id="canvas-builder-toggle" class="icon-btn" type="button" aria-expanded="false" aria-controls="canvas-builder" title="Настроить блоки">
+          <span aria-hidden="true">⊞</span>
+          <span class="sr-only">Настроить блоки</span>
+        </button>
+        <button id="appearance-toggle" class="icon-btn" type="button" aria-expanded="false" aria-controls="theme-settings" title="Настроить внешний вид">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="11" cy="18" r="2" fill="currentColor" stroke="none"/>
+          </svg>
+        </button>
         <button id="theme-toggle" class="icon-btn" type="button" title="Переключить тему">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
@@ -41,7 +68,145 @@
           <span class="sr-only">Содержание</span>
         </button>
       </div>
+      <aside id="theme-settings" class="theme-settings" hidden aria-label="Настройки внешнего вида">
+        <div class="theme-settings-head">
+          <strong>Общая тема</strong>
+          <button id="theme-settings-close" class="icon-btn" type="button" title="Закрыть настройки" aria-label="Закрыть настройки">×</button>
+        </div>
+        <label class="appearance-field">
+          <span>Тема</span>
+          <select id="theme-mode">
+            <option value="light">Светлая</option>
+            <option value="dark">Тёмная</option>
+            <option value="system">Системная</option>
+          </select>
+        </label>
+        <div class="appearance-field">
+          <span>Акцент</span>
+          <div id="accent-options" class="accent-options" role="group" aria-label="Цвет акцента">
+            <button class="accent-swatch is-active" type="button" data-accent="mint" aria-label="Мятный" title="Мятный"></button>
+            <button class="accent-swatch" type="button" data-accent="blue" aria-label="Синий" title="Синий"></button>
+            <button class="accent-swatch" type="button" data-accent="violet" aria-label="Фиолетовый" title="Фиолетовый"></button>
+            <button class="accent-swatch" type="button" data-accent="amber" aria-label="Янтарный" title="Янтарный"></button>
+            <button class="accent-swatch" type="button" data-accent="rose" aria-label="Розовый" title="Розовый"></button>
+            <button class="accent-swatch" type="button" data-accent="teal" aria-label="Бирюзовый" title="Бирюзовый"></button>
+            <button class="accent-swatch" type="button" data-accent="indigo" aria-label="Индиго" title="Индиго"></button>
+            <button class="accent-swatch" type="button" data-accent="coral" aria-label="Коралловый" title="Коралловый"></button>
+          </div>
+        </div>
+        <label class="appearance-field">
+          <span>Свой цвет</span>
+          <input id="custom-accent" class="custom-accent" type="color" value="#257a69" title="Выбрать свой цвет" />
+        </label>
+        <label class="appearance-field">
+          <span>Основа</span>
+          <select id="theme-surface">
+            <option value="soft">Мягкая</option>
+            <option value="paper">Тёплая</option>
+            <option value="ocean">Океан</option>
+            <option value="graphite">Графит</option>
+          </select>
+        </label>
+        <label class="appearance-field">
+          <span>Скругления</span>
+          <select id="theme-radius">
+            <option value="compact">Строгие</option>
+            <option value="soft">Мягкие</option>
+            <option value="round">Плавные</option>
+          </select>
+        </label>
+        <label class="appearance-field">
+          <span>Контраст</span>
+          <select id="theme-contrast">
+            <option value="soft">Мягкий</option>
+            <option value="balanced">Сбалансированный</option>
+            <option value="high">Высокий</option>
+          </select>
+        </label>
+        <label class="appearance-field">
+          <span>Плотность</span>
+          <select id="theme-density">
+            <option value="comfortable">Комфортная</option>
+            <option value="compact">Компактная</option>
+          </select>
+        </label>
+        <label class="appearance-check">
+          <input id="theme-motion" type="checkbox" />
+          <span>Без анимации</span>
+        </label>
+        <button id="appearance-reset" class="btn btn-inline" type="button">Сбросить</button>
+      </aside>
+      <aside id="canvas-builder" class="canvas-builder" hidden aria-label="Конструктор блоков">
+        <div class="canvas-builder-head">
+          <strong>Блоки</strong>
+          <button id="canvas-builder-close" class="icon-btn" type="button" title="Закрыть конструктор" aria-label="Закрыть конструктор">×</button>
+        </div>
+        <div id="canvas-builder-list" class="canvas-builder-list"></div>
+        <section id="canvas-panel-settings" class="canvas-panel-settings" hidden aria-label="Оформление выбранного блока">
+          <div class="canvas-panel-settings-head">
+            <strong>Оформление блока</strong>
+            <span id="canvas-panel-selected" class="hint">Выберите блок</span>
+          </div>
+          <label>Вид
+            <select id="canvas-panel-style">
+              <option value="plain">Нейтральный</option>
+              <option value="tinted">Тонированный</option>
+              <option value="outlined">Контурный</option>
+              <option value="solid">С акцентной полосой</option>
+            </select>
+          </label>
+          <label>Палитра
+            <select id="canvas-panel-accent">
+              <option value="inherit">Как у интерфейса</option>
+              <option value="mint">Мятная</option>
+              <option value="blue">Синяя</option>
+              <option value="violet">Фиолетовая</option>
+              <option value="amber">Янтарная</option>
+              <option value="rose">Розовая</option>
+              <option value="teal">Бирюзовая</option>
+              <option value="indigo">Индиго</option>
+              <option value="coral">Коралловая</option>
+              <option value="custom">Свой цвет</option>
+            </select>
+          </label>
+          <label id="canvas-panel-custom-accent-field" hidden>Свой цвет
+            <input id="canvas-panel-custom-accent" class="custom-accent" type="color" value="#257a69" />
+          </label>
+          <button id="canvas-panel-style-reset" class="btn btn-inline" type="button">Сбросить оформление</button>
+        </section>
+        <form id="canvas-builder-form" class="canvas-builder-form">
+          <strong>Добавить блок</strong>
+          <label>Название<input id="canvas-block-title" type="text" maxlength="80" placeholder="Мой блок" required /></label>
+          <label>Элемент
+            <select id="canvas-block-type">
+              <option value="text">Текст</option>
+              <option value="metric">Метрика</option>
+              <option value="status">Статус системы</option>
+            </select>
+          </label>
+          <label id="canvas-block-text-field">Содержимое<textarea id="canvas-block-text" rows="3" maxlength="2000" placeholder="Короткая заметка"></textarea></label>
+          <label id="canvas-block-metric-field" hidden>Метрика
+            <select id="canvas-block-metric">
+              <option value="map50">mAP50</option>
+              <option value="map75">mAP75</option>
+              <option value="latency">Задержка</option>
+              <option value="fps">FPS</option>
+              <option value="health">Здоровье сервисов</option>
+              <option value="host_cpu">CPU хоста</option>
+              <option value="host_mem">Память хоста</option>
+              <option value="firing_alerts">Активные алерты</option>
+            </select>
+          </label>
+          <button class="btn btn-primary" type="submit">Добавить на текущий экран</button>
+          <p id="canvas-builder-status" class="hint" role="status"></p>
+        </form>
+      </aside>
     </header>
+
+    <div id="panel-trash-dropzone" class="panel-trash-dropzone" hidden role="status" aria-label="Удалить блок">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7l1-3h4l1 3" /></svg>
+      <span>Корзина — отпустите для удаления</span>
+    </div>
 
     <main class="workspace">
       <aside id="contents-menu" class="contents-menu" aria-label="Содержание страницы" hidden>
@@ -55,28 +220,28 @@
         <nav class="steps-nav" id="steps-nav">
           <p class="nav-section-title">Пайплайн обучения</p>
           <button class="step-btn is-active" type="button" data-step="1" data-tab-target="tab-datasets" aria-label="Данные" title="Данные">
-            <span class="step-number">1</span>
+            <span class="step-number" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><ellipse cx="12" cy="5" rx="7" ry="3" /><path d="M5 5v6c0 1.7 3.1 3 7 3s7-1.3 7-3V5" /><path d="M5 11v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6" /></svg></span>
             <span class="step-info">
               <span class="step-title">Данные</span>
               <span class="step-desc">Загрузка и подготовка</span>
             </span>
           </button>
           <button class="step-btn" type="button" data-step="2" data-tab-target="tab-studio" aria-label="Студия модели" title="Студия модели">
-            <span class="step-number">2</span>
+            <span class="step-number" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M4 6h16M4 12h16M4 18h16" /><circle cx="9" cy="6" r="2" /><circle cx="15" cy="12" r="2" /><circle cx="11" cy="18" r="2" /></svg></span>
             <span class="step-info">
               <span class="step-title">Студия модели</span>
               <span class="step-desc">Архитектура и конфиг</span>
             </span>
           </button>
           <button class="step-btn" type="button" data-step="3" data-tab-target="tab-experiments" aria-label="Эксперименты" title="Эксперименты">
-            <span class="step-number">3</span>
+            <span class="step-number" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M9 3h6M10 3v5l-5 9a3 3 0 0 0 2.6 4.5h8.8A3 3 0 0 0 19 17l-5-9V3" /><path d="M8 15h8" /></svg></span>
             <span class="step-info">
               <span class="step-title">Эксперименты</span>
               <span class="step-desc">Обучение и оценка</span>
             </span>
           </button>
           <button class="step-btn" type="button" data-step="4" data-tab-target="tab-serving" aria-label="Публикация" title="Публикация">
-            <span class="step-number">4</span>
+            <span class="step-number" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M14 4c3.5.5 5.5 2.5 6 6l-5 5-4-4 3-3Z" /><path d="m11 11-4 1-3 3 5 1 1 5 3-3 1-4" /><path d="m5 19 3-3" /></svg></span>
             <span class="step-info">
               <span class="step-title">Публикация</span>
               <span class="step-desc">Экспорт и сервис</span>
@@ -85,85 +250,34 @@
 
           <p class="nav-section-title">Мониторинг</p>
           <button class="step-btn" type="button" data-step="5" data-tab-target="tab-overview" aria-label="Метрики" title="Метрики">
-            <span class="step-number">5</span>
+            <span class="step-number" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M4 19V5M4 19h16" /><path d="m7 15 4-4 3 2 5-6" /></svg></span>
             <span class="step-info">
               <span class="step-title">Метрики</span>
               <span class="step-desc">Живой мониторинг</span>
             </span>
           </button>
           <button class="step-btn" type="button" data-step="6" data-tab-target="tab-resources" aria-label="Ресурсы" title="Ресурсы">
-            <span class="step-number">6</span>
+            <span class="step-number" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><rect x="7" y="7" width="10" height="10" rx="1" /><path d="M9 3v4M12 3v4M15 3v4M9 17v4M12 17v4M15 17v4M3 9h4M3 12h4M3 15h4M17 9h4M17 12h4M17 15h4" /></svg></span>
             <span class="step-info">
               <span class="step-title">Ресурсы</span>
               <span class="step-desc">Нагрузка системы</span>
             </span>
           </button>
+
+          <p class="nav-section-title" data-auth-admin hidden>Администрирование</p>
+          <button class="step-btn" type="button" data-auth-admin data-step="7" data-tab-target="tab-users" aria-label="Пользователи" title="Пользователи" hidden>
+            <span class="step-number" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="9" cy="8" r="3" /><path d="M3.5 20a5.5 5.5 0 0 1 11 0" /><circle cx="17" cy="9" r="2.5" /><path d="M15 15.5a4.5 4.5 0 0 1 5.5 4" /></svg></span>
+            <span class="step-info">
+              <span class="step-title">Пользователи</span>
+              <span class="step-desc">Аккаунты и роли</span>
+            </span>
+          </button>
         </nav>
         
-        <div class="nav-footer">
-          <button id="prev-step" class="nav-btn" type="button" disabled>← Назад</button>
-          <button id="next-step" class="nav-btn nav-btn-primary" type="button">Далее →</button>
-        </div>
       </aside>
 
       <section class="tab-content">
         <section class="tab-pane tab-pane-grid overview-layout is-active" id="tab-overview" data-content-group="Обзор">
-          <article class="panel layout-main layout-hero">
-            <div class="panel-title-row"><h2>Сводка проекта</h2><span class="tag">Панель управления</span></div>
-            <div class="mission-hero">
-              <div class="hero-copy">
-                <p class="eyebrow">Рабочий процесс</p>
-                <h3>Наблюдайте, обучайте, сравнивайте, публикуйте</h3>
-                <p class="hero-text">
-                  Единая панель для данных, архитектур, экспериментов, TensorBoard, MLflow и TorchServe.
-                </p>
-                <div class="hero-actions">
-                  <button class="btn btn-primary" type="button" data-jump-tab="tab-studio">Открыть студию</button>
-                  <button class="btn btn-accent" type="button" data-jump-tab="tab-experiments">Посмотреть запуски</button>
-                  <button class="btn" type="button" data-jump-tab="tab-resources">Ресурсы</button>
-                </div>
-              </div>
-              <div class="hero-aside">
-                <div class="hero-signal">
-                  <p class="hero-kicker">Состояние системы</p>
-                  <strong id="hero-health-label">Ожидание телеметрии</strong>
-                  <span id="hero-health-note">Загружаются проверки здоровья и каталог экспериментов.</span>
-                </div>
-                <div class="hero-mini-grid">
-                  <div class="hero-mini-card">
-                    <span>Запуски</span>
-                    <strong id="hero-tracked-runs">0</strong>
-                  </div>
-                  <div class="hero-mini-card">
-                    <span>Активные задачи</span>
-                    <strong id="hero-running-jobs">0</strong>
-                  </div>
-                  <div class="hero-mini-card">
-                    <span>Лучший mAP50</span>
-                    <strong id="hero-best-map50">--</strong>
-                  </div>
-                  <div class="hero-mini-card">
-                    <span>Модели в сервисе</span>
-                    <strong id="hero-served-models">0</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <details class="compact-details">
-              <summary>Детали проекта <span class="details-hint">сводные количества</span></summary>
-              <div class="summary-grid">
-                <div class="summary-card"><p class="summary-label">Датасеты</p><p id="summary-datasets" class="summary-value">0</p><p class="summary-note">зарегистрированные источники</p></div>
-                <div class="summary-card"><p class="summary-label">Конфиги</p><p id="summary-configs" class="summary-value">0</p><p class="summary-note">планы экспериментов</p></div>
-                <div class="summary-card"><p class="summary-label">Архитектуры</p><p id="summary-architectures" class="summary-value">0</p><p class="summary-note">встроенные и пользовательские</p></div>
-                <div class="summary-card"><p class="summary-label">Эксперименты</p><p id="summary-experiments" class="summary-value">0</p><p class="summary-note">локальные и MLflow</p></div>
-                <div class="summary-card"><p class="summary-label">Задачи</p><p id="summary-jobs" class="summary-value">0</p><p class="summary-note">обучение и оценка</p></div>
-                <div class="summary-card"><p class="summary-label">Активные</p><p id="summary-running" class="summary-value">0</p><p class="summary-note">фоновые процессы</p></div>
-              </div>
-            </details>
-            <div class="subsection-head"><h3>Рекомендации системы</h3><span class="hint">Лучшие текущие запуски по mAP50, FPS и задержке</span></div>
-            <div id="recommendations-list" class="recommendation-list"></div>
-          </article>
-
           <article class="panel panel-compact layout-side">
             <div class="panel-title-row"><h2>Живые метрики</h2><span class="tag">Prometheus</span></div>
             <div class="kpi-grid kpi-grid-primary">
@@ -507,6 +621,20 @@
             <p id="usage-updated-at" class="hint">Ожидание метрик ресурсов...</p>
           </article>
         </section>
+
+        <section class="tab-pane tab-pane-grid admin-layout" id="tab-users" data-content-group="Администрирование" data-auth-admin hidden>
+          <article class="panel layout-main">
+            <div class="panel-title-row"><h2>Пользователи</h2><span class="tag">Администратор</span></div>
+            <form id="user-create-form" class="form-grid user-create-form">
+              <label>Логин<input id="user-create-username" name="username" type="text" minlength="3" maxlength="64" pattern="[a-zA-Z0-9_.-]+" autocomplete="off" required /></label>
+              <label>Пароль<input id="user-create-password" name="password" type="password" minlength="8" maxlength="256" autocomplete="new-password" required /></label>
+              <label>Роль<select id="user-create-role" name="role"><option value="user">Пользователь</option><option value="admin">Администратор</option></select></label>
+              <div class="inline-actions"><button class="btn btn-primary" type="submit">Добавить</button></div>
+            </form>
+            <div id="user-list" class="user-list"></div>
+            <p id="user-admin-status" class="hint" role="status"></p>
+          </article>
+        </section>
       </section>
     </main>
 
@@ -526,6 +654,6 @@
       </section>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=20260916-permanent-delete-v1"></script>
   </body>
 </html>

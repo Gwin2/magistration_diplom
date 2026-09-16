@@ -114,7 +114,40 @@ def make_client(tmp_path: Path, monkeypatch) -> TestClient:  # type: ignore[no-u
         "uav_vit.control.mlops.MlflowBridge.apply_ui_metadata",
         lambda self, run_name, tags=None, rating=None, note=None: True,
     )
-    return TestClient(create_app())
+    client = TestClient(create_app())
+    response = client.post(
+        "/auth/login",
+        json={"username": "admin", "password": "admin123"},
+    )
+    assert response.status_code == 200
+    return client
+
+
+def test_auth_roles_and_user_management(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    with make_client(tmp_path, monkeypatch) as client:
+        response = client.get("/auth/users")
+        assert response.status_code == 200
+        assert response.json()["items"][0]["role"] == "admin"
+
+        response = client.post(
+            "/auth/users",
+            json={"username": "operator", "password": "operator123", "role": "user"},
+        )
+        assert response.status_code == 200
+
+        response = client.put(
+            "/auth/users/operator",
+            json={"role": "admin", "password": "operator456"},
+        )
+        assert response.status_code == 200
+        operator = next(
+            item for item in response.json()["items"] if item["username"] == "operator"
+        )
+        assert operator["role"] == "admin"
+
+        response = client.delete("/auth/users/operator")
+        assert response.status_code == 200
+        assert all(item["username"] != "operator" for item in response.json()["items"])
 
 
 def test_dataset_upload_and_register(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
