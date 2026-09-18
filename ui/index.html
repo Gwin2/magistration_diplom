@@ -11,7 +11,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260916-permanent-delete-v1" />
+    <link rel="stylesheet" href="styles.css?v=20260918-builder-overflow-v1" />
   </head>
   <body data-theme="light" data-motion="on" data-density="comfortable">
     <div class="gradient-bg"></div>
@@ -32,57 +32,84 @@
 
     <header class="app-header">
       <div class="header-left">
-        <h1 class="app-title">NN Trainer</h1>
-        <span class="app-subtitle">Обучение пользовательских нейронных сетей</span>
+        <div id="header-section-switcher" class="section-switcher" tabindex="0" aria-label="Навигация по секциям">
+          <div class="section-switcher-current">
+            <span class="section-switcher-kicker">Текущая секция</span>
+            <div class="section-switcher-name-row">
+              <h1 id="header-section-title" class="section-switcher-title">Данные</h1>
+            </div>
+            <span id="header-section-description" class="section-switcher-description">Загрузка и подготовка</span>
+          </div>
+          <nav id="header-section-menu" class="section-switcher-menu" aria-label="Навигация по текущей секции"></nav>
+        </div>
       </div>
       <div class="header-status" id="header-status">
         <span class="status-dot status-ready"></span>
         <span class="status-text">Готово</span>
       </div>
-      <div class="header-actions">
+      <div class="header-actions" aria-label="Управление рабочей областью">
         <div id="auth-user" class="auth-user" hidden>
           <span id="auth-user-name"></span>
           <button id="auth-logout" class="btn btn-inline" type="button">Выйти</button>
         </div>
-        <button id="canvas-builder-toggle" class="icon-btn" type="button" aria-expanded="false" aria-controls="canvas-builder" title="Настроить блоки">
-          <span aria-hidden="true">⊞</span>
-          <span class="sr-only">Настроить блоки</span>
-        </button>
-        <button id="appearance-toggle" class="icon-btn" type="button" aria-expanded="false" aria-controls="theme-settings" title="Настроить внешний вид">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="11" cy="18" r="2" fill="currentColor" stroke="none"/>
-          </svg>
-        </button>
-        <button id="theme-toggle" class="icon-btn" type="button" title="Переключить тему">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-          </svg>
-        </button>
-        <button id="menu-toggle" class="icon-btn" type="button" title="Открыть меню">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-          </svg>
-        </button>
-        <button id="contents-toggle" class="icon-btn contents-toggle" type="button" aria-expanded="false" aria-controls="contents-menu" title="Содержание">
-          <span aria-hidden="true">☷</span>
-          <span class="sr-only">Содержание</span>
-        </button>
+        <div class="header-action-group" aria-label="Настройка">
+          <button id="canvas-builder-toggle" class="icon-btn" type="button" aria-expanded="false" aria-controls="canvas-builder" aria-label="Настроить блоки" title="Настроить блоки">
+            <span aria-hidden="true">⊞</span>
+            <span class="header-action-text">Блоки</span>
+            <span class="sr-only">Настроить блоки</span>
+          </button>
+          <button id="appearance-toggle" class="icon-btn" type="button" aria-expanded="false" aria-controls="theme-settings" aria-label="Настроить внешний вид" title="Настроить внешний вид">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="11" cy="18" r="2" fill="currentColor" stroke="none"/>
+            </svg>
+            <span class="header-action-text">Вид</span>
+          </button>
+          <button id="theme-toggle" class="icon-btn" type="button" aria-label="Включить тёмную тему" title="Включить тёмную тему">
+            <svg data-theme-icon="dark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M20.5 15.2A8.5 8.5 0 0 1 8.8 3.5 8.5 8.5 0 1 0 20.5 15.2Z"/>
+            </svg>
+            <svg data-theme-icon="light" hidden width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+            </svg>
+            <span class="header-action-text">Тема</span>
+          </button>
+        </div>
       </div>
       <aside id="theme-settings" class="theme-settings" hidden aria-label="Настройки внешнего вида">
         <div class="theme-settings-head">
-          <strong>Общая тема</strong>
+          <div class="theme-settings-title">
+            <span class="theme-settings-eyebrow">Внешний вид</span>
+            <strong>Настройка интерфейса</strong>
+          </div>
           <button id="theme-settings-close" class="icon-btn" type="button" title="Закрыть настройки" aria-label="Закрыть настройки">×</button>
         </div>
-        <label class="appearance-field">
-          <span>Тема</span>
-          <select id="theme-mode">
-            <option value="light">Светлая</option>
-            <option value="dark">Тёмная</option>
-            <option value="system">Системная</option>
-          </select>
-        </label>
-        <div class="appearance-field">
-          <span>Акцент</span>
+        <div class="theme-preview" aria-label="Предпросмотр темы">
+          <div class="theme-preview-head"><span>NN Trainer</span><i></i></div>
+          <div class="theme-preview-body">
+            <span class="theme-preview-line theme-preview-line-wide"></span>
+            <span class="theme-preview-line"></span>
+            <div class="theme-preview-cards"><i></i><i></i><i></i></div>
+          </div>
+        </div>
+        <section class="theme-settings-section">
+          <div class="theme-section-head">
+            <strong>Режим</strong>
+            <span>Основа интерфейса</span>
+          </div>
+          <label class="appearance-field">
+            <span>Тема</span>
+            <select id="theme-mode">
+              <option value="light">Светлая</option>
+              <option value="dark">Тёмная</option>
+              <option value="system">Системная</option>
+            </select>
+          </label>
+        </section>
+        <section class="theme-settings-section">
+          <div class="theme-section-head">
+            <strong>Акцент</strong>
+            <span>Цвет действий и фокуса</span>
+          </div>
           <div id="accent-options" class="accent-options" role="group" aria-label="Цвет акцента">
             <button class="accent-swatch is-active" type="button" data-accent="mint" aria-label="Мятный" title="Мятный"></button>
             <button class="accent-swatch" type="button" data-accent="blue" aria-label="Синий" title="Синий"></button>
@@ -93,113 +120,142 @@
             <button class="accent-swatch" type="button" data-accent="indigo" aria-label="Индиго" title="Индиго"></button>
             <button class="accent-swatch" type="button" data-accent="coral" aria-label="Коралловый" title="Коралловый"></button>
           </div>
+          <label class="appearance-field appearance-color-field">
+            <span>Свой цвет</span>
+            <input id="custom-accent" class="custom-accent" type="color" value="#257a69" title="Выбрать свой цвет" />
+          </label>
+        </section>
+        <section class="theme-settings-section">
+          <div class="theme-section-head">
+            <strong>Материалы</strong>
+            <span>Характер поверхностей</span>
+          </div>
+          <div class="theme-settings-grid">
+            <label class="appearance-field">
+              <span>Основа</span>
+              <select id="theme-surface">
+                <option value="soft">Мягкая</option>
+                <option value="paper">Тёплая</option>
+                <option value="ocean">Океан</option>
+                <option value="graphite">Графит</option>
+              </select>
+            </label>
+            <label class="appearance-field">
+              <span>Форма</span>
+              <select id="theme-radius">
+                <option value="compact">Строгая</option>
+                <option value="soft">Мягкая</option>
+                <option value="round">Плавная</option>
+              </select>
+            </label>
+            <label class="appearance-field">
+              <span>Контраст</span>
+              <select id="theme-contrast">
+                <option value="soft">Мягкий</option>
+                <option value="balanced">Баланс</option>
+                <option value="high">Высокий</option>
+              </select>
+            </label>
+            <label class="appearance-field">
+              <span>Плотность</span>
+              <select id="theme-density">
+                <option value="comfortable">Комфортная</option>
+                <option value="compact">Компактная</option>
+              </select>
+            </label>
+          </div>
+        </section>
+        <div class="theme-settings-footer">
+          <label class="appearance-check">
+            <input id="theme-motion" type="checkbox" />
+            <span>Без анимации</span>
+          </label>
+          <button id="appearance-reset" class="btn btn-inline" type="button">Сбросить</button>
         </div>
-        <label class="appearance-field">
-          <span>Свой цвет</span>
-          <input id="custom-accent" class="custom-accent" type="color" value="#257a69" title="Выбрать свой цвет" />
-        </label>
-        <label class="appearance-field">
-          <span>Основа</span>
-          <select id="theme-surface">
-            <option value="soft">Мягкая</option>
-            <option value="paper">Тёплая</option>
-            <option value="ocean">Океан</option>
-            <option value="graphite">Графит</option>
-          </select>
-        </label>
-        <label class="appearance-field">
-          <span>Скругления</span>
-          <select id="theme-radius">
-            <option value="compact">Строгие</option>
-            <option value="soft">Мягкие</option>
-            <option value="round">Плавные</option>
-          </select>
-        </label>
-        <label class="appearance-field">
-          <span>Контраст</span>
-          <select id="theme-contrast">
-            <option value="soft">Мягкий</option>
-            <option value="balanced">Сбалансированный</option>
-            <option value="high">Высокий</option>
-          </select>
-        </label>
-        <label class="appearance-field">
-          <span>Плотность</span>
-          <select id="theme-density">
-            <option value="comfortable">Комфортная</option>
-            <option value="compact">Компактная</option>
-          </select>
-        </label>
-        <label class="appearance-check">
-          <input id="theme-motion" type="checkbox" />
-          <span>Без анимации</span>
-        </label>
-        <button id="appearance-reset" class="btn btn-inline" type="button">Сбросить</button>
       </aside>
       <aside id="canvas-builder" class="canvas-builder" hidden aria-label="Конструктор блоков">
         <div class="canvas-builder-head">
-          <strong>Блоки</strong>
-          <button id="canvas-builder-close" class="icon-btn" type="button" title="Закрыть конструктор" aria-label="Закрыть конструктор">×</button>
+          <div class="canvas-builder-heading">
+            <span class="canvas-builder-eyebrow">Рабочая область</span>
+            <strong>Блоки</strong>
+          </div>
+          <div class="canvas-builder-head-actions">
+            <label class="canvas-layout-lock" title="Запретить перемещение и изменение размера блоков">
+              <input id="canvas-layout-lock" type="checkbox" />
+              <span>Закрепить</span>
+            </label>
+            <button id="canvas-builder-close" class="icon-btn" type="button" title="Закрыть конструктор" aria-label="Закрыть конструктор">×</button>
+          </div>
         </div>
         <div id="canvas-builder-list" class="canvas-builder-list"></div>
-        <section id="canvas-panel-settings" class="canvas-panel-settings" hidden aria-label="Оформление выбранного блока">
-          <div class="canvas-panel-settings-head">
-            <strong>Оформление блока</strong>
-            <span id="canvas-panel-selected" class="hint">Выберите блок</span>
+        <details id="canvas-panel-settings" class="canvas-panel-settings" hidden aria-label="Оформление выбранного блока" open>
+          <summary class="canvas-builder-section-summary">
+            <span>
+              <strong>Оформление блока</strong>
+              <small id="canvas-panel-selected">Выберите блок</small>
+            </span>
+          </summary>
+          <div class="canvas-panel-settings-body">
+            <label>Вид
+              <select id="canvas-panel-style">
+                <option value="plain">Нейтральный</option>
+                <option value="tinted">Тонированный</option>
+                <option value="outlined">Контурный</option>
+                <option value="solid">С акцентной полосой</option>
+              </select>
+            </label>
+            <label>Палитра
+              <select id="canvas-panel-accent">
+                <option value="inherit">Как у интерфейса</option>
+                <option value="mint">Мятная</option>
+                <option value="blue">Синяя</option>
+                <option value="violet">Фиолетовая</option>
+                <option value="amber">Янтарная</option>
+                <option value="rose">Розовая</option>
+                <option value="teal">Бирюзовая</option>
+                <option value="indigo">Индиго</option>
+                <option value="coral">Коралловая</option>
+                <option value="custom">Свой цвет</option>
+              </select>
+            </label>
+            <label id="canvas-panel-custom-accent-field" hidden>Свой цвет
+              <input id="canvas-panel-custom-accent" class="custom-accent" type="color" value="#257a69" />
+            </label>
+            <button id="canvas-panel-style-reset" class="btn btn-inline" type="button">Сбросить оформление</button>
           </div>
-          <label>Вид
-            <select id="canvas-panel-style">
-              <option value="plain">Нейтральный</option>
-              <option value="tinted">Тонированный</option>
-              <option value="outlined">Контурный</option>
-              <option value="solid">С акцентной полосой</option>
-            </select>
-          </label>
-          <label>Палитра
-            <select id="canvas-panel-accent">
-              <option value="inherit">Как у интерфейса</option>
-              <option value="mint">Мятная</option>
-              <option value="blue">Синяя</option>
-              <option value="violet">Фиолетовая</option>
-              <option value="amber">Янтарная</option>
-              <option value="rose">Розовая</option>
-              <option value="teal">Бирюзовая</option>
-              <option value="indigo">Индиго</option>
-              <option value="coral">Коралловая</option>
-              <option value="custom">Свой цвет</option>
-            </select>
-          </label>
-          <label id="canvas-panel-custom-accent-field" hidden>Свой цвет
-            <input id="canvas-panel-custom-accent" class="custom-accent" type="color" value="#257a69" />
-          </label>
-          <button id="canvas-panel-style-reset" class="btn btn-inline" type="button">Сбросить оформление</button>
-        </section>
-        <form id="canvas-builder-form" class="canvas-builder-form">
-          <strong>Добавить блок</strong>
-          <label>Название<input id="canvas-block-title" type="text" maxlength="80" placeholder="Мой блок" required /></label>
-          <label>Элемент
-            <select id="canvas-block-type">
-              <option value="text">Текст</option>
-              <option value="metric">Метрика</option>
-              <option value="status">Статус системы</option>
-            </select>
-          </label>
-          <label id="canvas-block-text-field">Содержимое<textarea id="canvas-block-text" rows="3" maxlength="2000" placeholder="Короткая заметка"></textarea></label>
-          <label id="canvas-block-metric-field" hidden>Метрика
-            <select id="canvas-block-metric">
-              <option value="map50">mAP50</option>
-              <option value="map75">mAP75</option>
-              <option value="latency">Задержка</option>
-              <option value="fps">FPS</option>
-              <option value="health">Здоровье сервисов</option>
-              <option value="host_cpu">CPU хоста</option>
-              <option value="host_mem">Память хоста</option>
-              <option value="firing_alerts">Активные алерты</option>
-            </select>
-          </label>
-          <button class="btn btn-primary" type="submit">Добавить на текущий экран</button>
-          <p id="canvas-builder-status" class="hint" role="status"></p>
-        </form>
+        </details>
+        <details id="canvas-builder-add-section" class="canvas-builder-section" aria-label="Добавить блок">
+          <summary class="canvas-builder-section-summary">
+            <span>
+              <strong>Добавить блок</strong>
+              <small>Текст, метрика или статус</small>
+            </span>
+          </summary>
+          <form id="canvas-builder-form" class="canvas-builder-form">
+            <label>Название<input id="canvas-block-title" type="text" maxlength="80" placeholder="Мой блок" required /></label>
+            <label>Элемент
+              <select id="canvas-block-type">
+                <option value="text">Текст</option>
+                <option value="metric">Метрика</option>
+                <option value="status">Статус системы</option>
+              </select>
+            </label>
+            <label id="canvas-block-text-field">Содержимое<textarea id="canvas-block-text" rows="3" maxlength="2000" placeholder="Короткая заметка"></textarea></label>
+            <label id="canvas-block-metric-field" hidden>Метрика
+              <select id="canvas-block-metric">
+                <option value="map50">mAP50</option>
+                <option value="map75">mAP75</option>
+                <option value="latency">Задержка</option>
+                <option value="fps">FPS</option>
+                <option value="health">Здоровье сервисов</option>
+                <option value="host_cpu">CPU хоста</option>
+                <option value="host_mem">Память хоста</option>
+                <option value="firing_alerts">Активные алерты</option>
+              </select>
+            </label>
+            <button class="btn btn-primary" type="submit">Добавить на текущий экран</button>
+          </form>
+        </details>
       </aside>
     </header>
 
@@ -654,6 +710,6 @@
       </section>
     </div>
 
-    <script src="app.js?v=20260916-permanent-delete-v1"></script>
+    <script src="app.js?v=20260918-builder-overflow-v1"></script>
   </body>
 </html>

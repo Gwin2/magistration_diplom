@@ -135,6 +135,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const PROMETHEUS_BASE = '/api/prometheus';
   const HIDDEN_PANELS_STORAGE_KEY = 'nn_trainer_hidden_panels';
   const CUSTOM_PANELS_STORAGE_KEY = 'nn_trainer_custom_panels';
+  const CANVAS_BUILDER_SIZE_STORAGE_KEY = 'nn_trainer_canvas_builder_size';
+  const CANVAS_LAYOUT_LOCK_STORAGE_KEY = 'nn_trainer_canvas_layout_locked';
   const CONSTRUCTOR_BLUEPRINT_STORAGE_KEY = 'nn_trainer_constructor_blueprint';
   const CUSTOM_METRIC_LABELS = {
     map50: 'mAP50',
@@ -149,6 +151,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const CUSTOM_BLOCK_TYPES = new Set(['text', 'metric', 'status']);
   const PANEL_STYLES = new Set(['plain', 'tinted', 'outlined', 'solid']);
   const PANEL_ACCENTS = new Set(['inherit', ...Object.keys(ACCENT_PALETTES), 'custom']);
+  const PANEL_SCALE_MIN = 0.6;
+  const PANEL_SCALE_MAX = 1.6;
+  const PANEL_SCALE_STEP = 0.05;
 
   // DOM Elements
   const navPanel = document.getElementById('nav-panel');
@@ -178,6 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const canvasBuilderToggle = document.getElementById('canvas-builder-toggle');
   const canvasBuilder = document.getElementById('canvas-builder');
   const canvasBuilderClose = document.getElementById('canvas-builder-close');
+  const canvasLayoutLock = document.getElementById('canvas-layout-lock');
   const canvasBuilderList = document.getElementById('canvas-builder-list');
   const canvasBuilderForm = document.getElementById('canvas-builder-form');
   const canvasBlockTitle = document.getElementById('canvas-block-title');
@@ -186,7 +192,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const canvasBlockTextField = document.getElementById('canvas-block-text-field');
   const canvasBlockMetric = document.getElementById('canvas-block-metric');
   const canvasBlockMetricField = document.getElementById('canvas-block-metric-field');
-  const canvasBuilderStatus = document.getElementById('canvas-builder-status');
   const canvasPanelSettings = document.getElementById('canvas-panel-settings');
   const canvasPanelSelected = document.getElementById('canvas-panel-selected');
   const canvasPanelStyle = document.getElementById('canvas-panel-style');
@@ -201,6 +206,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const stepButtons = document.querySelectorAll('.step-btn');
   const tabPanes = document.querySelectorAll('.tab-pane');
   const headerStatus = document.getElementById('header-status');
+  const headerSectionSwitcher = document.getElementById('header-section-switcher');
+  const headerSectionTrigger = document.getElementById('header-section-trigger');
+  const headerSectionMenu = document.getElementById('header-section-menu');
+  const headerSectionTitle = document.getElementById('header-section-title');
+  const headerSectionDescription = document.getElementById('header-section-description');
   const contentsToggle = document.getElementById('contents-toggle');
   const contentsMenu = document.getElementById('contents-menu');
   const contentsClose = document.getElementById('contents-close');
@@ -208,12 +218,16 @@ document.addEventListener('DOMContentLoaded', () => {
   let contentsObserver;
   let panelZIndex = 10;
   let selectedCanvasPanel = null;
+  const selectedCanvasPanels = new Set();
+  let canvasLayoutLocked = localStorage.getItem(CANVAS_LAYOUT_LOCK_STORAGE_KEY) === 'true';
+  const collapsedCanvasGroups = new Set();
 
   // Initialize
   function init() {
     setupAuth();
     setupUserManagement();
     setupNavigation();
+    setupHeaderSectionNavigation();
     setupContentsNavigation();
     restoreCustomPanels();
     setupPanelReordering();
@@ -428,15 +442,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Navigation toggle for mobile
   function setupNavigation() {
+    const workspace = document.querySelector('.workspace');
+    const setMenuOpen = open => {
+      workspace?.classList.toggle('menu-open', open);
+      menuToggle?.setAttribute('aria-expanded', String(open));
+    };
     menuToggle?.addEventListener('click', () => {
-      document.querySelector('.workspace')?.classList.toggle('menu-open');
+      setMenuOpen(!workspace?.classList.contains('menu-open'));
     });
 
     // Close menu when clicking outside on mobile
     document.addEventListener('click', (e) => {
       if (window.innerWidth <= 900) {
         if (!navPanel?.contains(e.target) && !menuToggle?.contains(e.target)) {
-          document.querySelector('.workspace')?.classList.remove('menu-open');
+          setMenuOpen(false);
         }
       }
     });
@@ -764,6 +783,8 @@ document.addEventListener('DOMContentLoaded', () => {
     else keys.delete(key);
     panel.hidden = hidden;
     panel.classList.toggle('is-deleted', hidden);
+    if (hidden) selectedCanvasPanels.delete(panel);
+    updateCanvasPanelSelection();
     saveHiddenPanelKeys(keys);
     updateCanvasBounds(pane);
     renderCanvasBuilder();
@@ -783,19 +804,44 @@ document.addEventListener('DOMContentLoaded', () => {
     const styles = readPanelStyles();
     delete styles[key];
     savePanelStyles(styles);
+    selectedCanvasPanels.delete(panel);
     if (selectedCanvasPanel?.panel === panel) selectedCanvasPanel = null;
+    updateCanvasPanelSelection();
     panel.remove();
     savePanelState();
     updateCanvasBounds(pane);
     renderCanvasBuilder();
     renderContentsMenu();
     observeContentPanels();
-    setCanvasBuilderStatus('Пользовательский блок удалён окончательно.');
   }
 
   function getPanelLabel(panel) {
     return panel.querySelector(':scope > .panel-title-row h2, :scope > .panel-title-row h3, :scope > .panel-title-row h4')
       ?.textContent.trim() || 'Без названия';
+  }
+
+  function updateCanvasPanelSelection() {
+    document.querySelectorAll('.tab-pane.free-canvas > .panel').forEach(panel => {
+      panel.classList.toggle('is-multi-selected', selectedCanvasPanels.has(panel));
+    });
+  }
+
+  function clearCanvasPanelSelection() {
+    selectedCanvasPanels.clear();
+    updateCanvasPanelSelection();
+  }
+
+  function selectCanvasPanelForInteraction(pane, panel, additive = false) {
+    const samePane = [...selectedCanvasPanels].every(item => item.parentElement === pane);
+    if (!samePane) clearCanvasPanelSelection();
+    if (additive) {
+      if (selectedCanvasPanels.has(panel)) selectedCanvasPanels.delete(panel);
+      else selectedCanvasPanels.add(panel);
+    } else if (!selectedCanvasPanels.has(panel)) {
+      clearCanvasPanelSelection();
+      selectedCanvasPanels.add(panel);
+    }
+    updateCanvasPanelSelection();
   }
 
   function renderPanelStyleSettings() {
@@ -818,6 +864,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function selectCanvasPanel(pane, panel) {
+    clearCanvasPanelSelection();
+    selectedCanvasPanels.add(panel);
+    updateCanvasPanelSelection();
     selectedCanvasPanel = { pane, panel };
     raisePanel(panel);
     renderCanvasBuilder();
@@ -838,7 +887,6 @@ document.addEventListener('DOMContentLoaded', () => {
     savePanelStyles(styles);
     applyPanelStyle(pane, panel, styles);
     renderPanelStyleSettings();
-    setCanvasBuilderStatus('Оформление сохранено');
   }
 
   function resetSelectedPanelStyle() {
@@ -850,7 +898,6 @@ document.addEventListener('DOMContentLoaded', () => {
     savePanelStyles(styles);
     applyPanelStyle(pane, panel, styles);
     renderPanelStyleSettings();
-    setCanvasBuilderStatus('Оформление сброшено');
   }
 
   function renderCanvasBuilder() {
@@ -859,49 +906,65 @@ document.addEventListener('DOMContentLoaded', () => {
     tabPanes.forEach(pane => {
       const panels = [...pane.querySelectorAll(':scope > .panel')];
       if (!panels.length) return;
-      const group = document.createElement('section');
+      const group = document.createElement('details');
       group.className = 'canvas-builder-group';
+      group.open = !collapsedCanvasGroups.has(pane.id);
+      group.addEventListener('toggle', () => {
+        if (group.open) collapsedCanvasGroups.delete(pane.id);
+        else collapsedCanvasGroups.add(pane.id);
+      });
+      const summary = document.createElement('summary');
+      summary.className = 'canvas-builder-group-summary';
       const heading = document.createElement('strong');
       heading.textContent = pane.dataset.contentGroup || pane.id;
-      group.append(heading);
+      const count = document.createElement('span');
+      count.className = 'canvas-builder-group-count';
+      count.textContent = `${panels.filter(panel => !panel.hidden).length}/${panels.length}`;
+      summary.append(heading, count);
+      group.append(summary);
 
       panels.forEach(panel => {
         const item = document.createElement('div');
         item.className = 'canvas-builder-item';
         item.classList.toggle('is-deleted', panel.hidden);
+        item.classList.toggle('is-selected', selectedCanvasPanels.has(panel));
+        const itemMain = document.createElement('div');
+        itemMain.className = 'canvas-builder-item-main';
         const label = document.createElement('button');
         label.type = 'button';
         label.className = 'canvas-builder-panel-name';
         label.textContent = getPanelLabel(panel);
-        label.classList.toggle('is-selected', selectedCanvasPanel?.panel === panel);
+        label.title = 'Выбрать блок и поднять его поверх остальных';
+        label.classList.toggle('is-selected', selectedCanvasPanels.has(panel));
         label.addEventListener('click', () => selectCanvasPanel(pane, panel));
+        const state = document.createElement('span');
+        state.className = 'canvas-builder-item-state';
+        state.textContent = panel.hidden ? 'Скрыт' : 'На экране';
+        itemMain.append(label, state);
         const actions = document.createElement('div');
         actions.className = 'canvas-builder-actions';
         const action = document.createElement('button');
         action.type = 'button';
         action.className = panel.hidden ? 'btn btn-inline btn-primary' : 'btn btn-inline';
-        action.textContent = panel.hidden ? 'Вернуть' : 'Убрать';
+        action.textContent = panel.hidden ? 'Показать' : 'Скрыть';
+        action.title = panel.hidden ? 'Вернуть блок на канвас' : 'Скрыть блок на канвасе';
         action.addEventListener('click', () => setPanelVisibility(pane, panel, !panel.hidden));
         actions.append(action);
         if (panel.dataset.customPanelId) {
           const deleteAction = document.createElement('button');
           deleteAction.type = 'button';
           deleteAction.className = 'btn btn-inline btn-danger';
-          deleteAction.textContent = 'Удалить';
+          deleteAction.textContent = 'Удалить навсегда';
           deleteAction.title = 'Удалить без возможности восстановления';
           deleteAction.addEventListener('click', () => deleteCustomPanel(pane, panel));
           actions.append(deleteAction);
         }
-        item.append(label, actions);
+        item.append(itemMain, actions);
         group.append(item);
       });
       canvasBuilderList.append(group);
     });
     renderPanelStyleSettings();
-  }
-
-  function setCanvasBuilderStatus(message) {
-    if (canvasBuilderStatus) canvasBuilderStatus.textContent = message;
   }
 
   function updateCanvasBuilderFields() {
@@ -948,7 +1011,6 @@ document.addEventListener('DOMContentLoaded', () => {
     observeContentPanels();
     canvasBuilderForm?.reset();
     updateCanvasBuilderFields();
-    setCanvasBuilderStatus('Блок добавлен');
   }
 
   function setCanvasBuilderOpen(open) {
@@ -958,7 +1020,37 @@ document.addEventListener('DOMContentLoaded', () => {
     if (open) renderCanvasBuilder();
   }
 
+  function restoreCanvasBuilderSize() {
+    if (!canvasBuilder) return;
+    try {
+      const size = JSON.parse(localStorage.getItem(CANVAS_BUILDER_SIZE_STORAGE_KEY) || '{}');
+      ['width', 'height'].forEach(property => {
+        const value = Number(size[property]);
+        if (Number.isFinite(value) && value > 0) canvasBuilder.style[property] = `${Math.round(value)}px`;
+      });
+    } catch (_error) {
+      // Ignore an invalid size saved by an older session.
+    }
+  }
+
   function setupCanvasBuilder() {
+    restoreCanvasBuilderSize();
+    canvasLayoutLock?.addEventListener('change', event => {
+      canvasLayoutLocked = event.target.checked;
+      localStorage.setItem(CANVAS_LAYOUT_LOCK_STORAGE_KEY, String(canvasLayoutLocked));
+      document.body.classList.toggle('canvas-layout-locked', canvasLayoutLocked);
+    });
+    if (canvasLayoutLock) canvasLayoutLock.checked = canvasLayoutLocked;
+    document.body.classList.toggle('canvas-layout-locked', canvasLayoutLocked);
+    if (canvasBuilder && window.ResizeObserver) {
+      new ResizeObserver(([entry]) => {
+        if (canvasBuilder.hidden || !entry.contentRect.width) return;
+        localStorage.setItem(CANVAS_BUILDER_SIZE_STORAGE_KEY, JSON.stringify({
+          width: Math.round(entry.contentRect.width),
+          height: Math.round(entry.contentRect.height)
+        }));
+      }).observe(canvasBuilder);
+    }
     canvasBuilderToggle?.addEventListener('click', event => {
       event.stopPropagation();
       const open = canvasBuilder?.hidden !== false;
@@ -1018,7 +1110,8 @@ document.addEventListener('DOMContentLoaded', () => {
       top: Number(panel.dataset.canvasTop) || Math.round(rect.top),
       width: Number(panel.dataset.canvasWidth) || Math.round(rect.width),
       height: Number(panel.dataset.canvasHeight) || Math.round(rect.height),
-      zIndex: Number(panel.dataset.canvasZ) || undefined
+      zIndex: Number(panel.dataset.canvasZ) || undefined,
+      scale: getPanelScale(panel)
     };
     localStorage.setItem('nn_trainer_panel_layouts', JSON.stringify(layouts));
   }
@@ -1037,7 +1130,8 @@ document.addEventListener('DOMContentLoaded', () => {
           top: Number(panel.dataset.canvasTop) || Math.round(rect.top),
           width: Number(panel.dataset.canvasWidth) || Math.round(rect.width),
           height: Number(panel.dataset.canvasHeight) || Math.round(rect.height),
-          zIndex: Number(panel.dataset.canvasZ) || undefined
+          zIndex: Number(panel.dataset.canvasZ) || undefined,
+          scale: getPanelScale(panel)
         };
       });
       layouts[pane.id] = paneLayouts;
@@ -1114,6 +1208,54 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCanvasBounds(pane);
   }
 
+  function getPanelScale(panel) {
+    const scale = Number(panel.dataset.canvasScale);
+    return Number.isFinite(scale) ? scale : 1;
+  }
+
+  function setPanelScale(panel, value) {
+    const scale = Math.min(
+      PANEL_SCALE_MAX,
+      Math.max(PANEL_SCALE_MIN, Math.round(Number(value) * 100) / 100)
+    );
+    panel.dataset.canvasScale = String(scale);
+    panel.style.setProperty('--panel-content-scale', String(scale));
+    const valueLabel = panel.querySelector(':scope > .panel-scale-control output');
+    if (valueLabel) valueLabel.textContent = `${Math.round(scale * 100)}%`;
+  }
+
+  function addPanelScaleControl(pane, panel) {
+    if (panel.querySelector(':scope > .panel-scale-control')) return;
+    const control = document.createElement('div');
+    control.className = 'panel-scale-control';
+    control.title = 'Колесо мыши — масштаб содержимого блока';
+
+    const reset = document.createElement('button');
+    reset.type = 'button';
+    reset.className = 'panel-scale-value';
+    reset.setAttribute('aria-label', 'Сбросить масштаб содержимого');
+    const valueLabel = document.createElement('output');
+    reset.append(valueLabel);
+
+    control.append(reset);
+    panel.append(control);
+
+    const change = value => {
+      setPanelScale(panel, value);
+      savePanelLayout(pane, panel);
+    };
+    reset.addEventListener('click', () => change(1));
+    control.addEventListener('pointerdown', event => event.stopPropagation());
+    panel.addEventListener('wheel', event => {
+      if (event.deltaY === 0) return;
+      if (event.target instanceof Element && event.target.closest('.panel-scale-control')) return;
+      event.preventDefault();
+      raisePanel(panel);
+      change(getPanelScale(panel) + (event.deltaY < 0 ? PANEL_SCALE_STEP : -PANEL_SCALE_STEP));
+    }, { passive: false });
+    setPanelScale(panel, getPanelScale(panel));
+  }
+
   function isPointerOverTrash(event) {
     if (!panelTrashDropzone || panelTrashDropzone.hidden) return false;
     const rect = panelTrashDropzone.getBoundingClientRect();
@@ -1126,6 +1268,13 @@ document.addEventListener('DOMContentLoaded', () => {
     panelTrashDropzone.hidden = !visible;
     panelTrashDropzone.classList.toggle('is-visible', visible);
     panelTrashDropzone.classList.toggle('is-over', visible && over);
+    const label = panelTrashDropzone.querySelector('span');
+    if (label && visible) {
+      const count = selectedCanvasPanels.size;
+      label.textContent = count > 1
+        ? `Корзина — удалить ${count} блока${count < 5 ? 'а' : 'ов'}`
+        : 'Корзина — отпустите для удаления';
+    }
   }
 
   function setPanelLayout(pane, panel, saved, fallback) {
@@ -1137,6 +1286,7 @@ document.addEventListener('DOMContentLoaded', () => {
     panel.style.position = 'absolute';
     setPanelPosition(pane, panel, left, top);
     setPanelSize(pane, panel, width, height);
+    setPanelScale(panel, Number(saved?.scale) || 1);
     if (Number(saved?.zIndex) > 0) {
       panel.dataset.canvasZ = String(Math.round(saved.zIndex));
       panel.style.zIndex = panel.dataset.canvasZ;
@@ -1161,11 +1311,17 @@ document.addEventListener('DOMContentLoaded', () => {
     panel.dataset.canvasZ = panel.style.zIndex;
   }
 
+  function getPanelsForMove(pane, panel) {
+    const selected = [...selectedCanvasPanels]
+      .filter(item => item.parentElement === pane && !item.hidden);
+    return selected.includes(panel) ? selected : [panel];
+  }
+
   function getPanelResizeEdge(panel, event) {
     const rect = panel.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
-    const edge = Math.min(12, Math.max(8, Math.min(rect.width, rect.height) / 4));
+    const edge = Math.min(18, Math.max(12, Math.min(rect.width, rect.height) / 4));
     const horizontal = x <= edge ? 'w' : rect.width - x <= edge ? 'e' : '';
     const vertical = y <= edge ? 'n' : rect.height - y <= edge ? 's' : '';
     return `${vertical}${horizontal}`;
@@ -1175,30 +1331,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const operation = activePanelOperation;
     if (!operation || (event?.pointerId !== undefined && operation.pointerId !== event.pointerId)) return;
     const droppedInTrash = operation.mode === 'move' && isPointerOverTrash(event);
-    operation.panel.classList.remove('is-dragging', 'is-resizing');
-    delete operation.panel.dataset.resizeEdge;
+    const panels = operation.panels || [operation.panel];
+    panels.forEach(panel => {
+      panel.classList.remove('is-dragging', 'is-resizing');
+      delete panel.dataset.resizeEdge;
+    });
     if (operation.source?.hasPointerCapture?.(operation.pointerId)) {
       operation.source.releasePointerCapture(operation.pointerId);
     }
     if (droppedInTrash) {
-      savePanelLayout(operation.pane, operation.panel);
-      setPanelVisibility(operation.pane, operation.panel, true);
-      setCanvasBuilderStatus(`${getPanelLabel(operation.panel)} перемещён в корзину`);
+      panels.forEach(panel => setPanelVisibility(operation.pane, panel, true));
+      panels.forEach(panel => selectedCanvasPanels.delete(panel));
     } else {
-      savePanelLayout(operation.pane, operation.panel);
+      panels.forEach(panel => savePanelLayout(operation.pane, panel));
     }
+    updateCanvasPanelSelection();
     setTrashDropzoneVisible(false);
     activePanelOperation = null;
   }
 
   function beginPanelOperation(pane, panel, event, mode, edge, source) {
     if (event.button !== undefined && event.button !== 0) return;
+    if (canvasLayoutLocked) return;
     const rect = getPanelCanvasRect(pane, panel);
+    const panels = mode === 'move' ? getPanelsForMove(pane, panel) : [panel];
     event.preventDefault();
-    raisePanel(panel);
+    panels.forEach(raisePanel);
     activePanelOperation = {
       pane,
       panel,
+      panels,
       source,
       mode,
       edge,
@@ -1210,7 +1372,12 @@ document.addEventListener('DOMContentLoaded', () => {
         top: Number(panel.dataset.canvasTop) || Math.round(rect.top),
         width: panel.getBoundingClientRect().width,
         height: panel.getBoundingClientRect().height
-      }
+      },
+      starts: panels.map(item => ({
+        panel: item,
+        left: Number(item.dataset.canvasLeft) || 0,
+        top: Number(item.dataset.canvasTop) || 0
+      }))
     };
     panel.classList.toggle('is-dragging', mode === 'move');
     panel.classList.toggle('is-resizing', mode === 'resize');
@@ -1226,12 +1393,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const dy = event.clientY - operation.startY;
     if (operation.mode === 'move') {
       panelTrashDropzone?.classList.toggle('is-over', isPointerOverTrash(event));
-      setPanelPosition(
-        operation.pane,
-        operation.panel,
-        operation.start.left + dx,
-        operation.start.top + dy
-      );
+      operation.starts.forEach(start => {
+        setPanelPosition(operation.pane, start.panel, start.left + dx, start.top + dy);
+      });
       event.preventDefault();
       return;
     }
@@ -1258,21 +1422,47 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function addPanelCanvasInteractions(pane, panel) {
+    if (!panel.querySelector(':scope > .panel-resize-handle')) {
+      const resizeHandle = document.createElement('button');
+      resizeHandle.type = 'button';
+      resizeHandle.className = 'panel-resize-handle';
+      resizeHandle.setAttribute('aria-label', 'Изменить размер блока');
+      resizeHandle.title = 'Изменить размер блока';
+      resizeHandle.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M10 17h7V10" /></svg>';
+      resizeHandle.addEventListener('pointerdown', event => {
+        event.stopPropagation();
+        beginPanelOperation(pane, panel, event, 'resize', 'se', resizeHandle);
+      });
+      panel.append(resizeHandle);
+    }
+    addPanelScaleControl(pane, panel);
     panel.addEventListener('pointerdown', event => {
       if (event.button !== undefined && event.button !== 0) return;
       const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest('.panel-scale-control')) return;
       const interactive = target?.closest(
         'button, a, input, select, textarea, option, label, [contenteditable="true"]'
       );
       const edge = getPanelResizeEdge(panel, event);
+      const additive = event.shiftKey || event.ctrlKey || event.metaKey;
+      if (additive && !interactive && !edge) {
+        selectCanvasPanelForInteraction(pane, panel, true);
+        event.preventDefault();
+        return;
+      }
+      selectCanvasPanelForInteraction(pane, panel);
       if (interactive) {
         raisePanel(panel);
         return;
       }
       beginPanelOperation(pane, panel, event, edge ? 'resize' : 'move', edge, panel);
-    });
+    }, true);
     panel.addEventListener('pointermove', event => {
       if (activePanelOperation?.panel === panel) return;
+      if (canvasLayoutLocked) {
+        delete panel.dataset.resizeEdge;
+        return;
+      }
       panel.dataset.resizeEdge = getPanelResizeEdge(panel, event);
     });
     panel.addEventListener('pointerleave', () => {
@@ -1471,7 +1661,15 @@ document.addEventListener('DOMContentLoaded', () => {
       button.classList.toggle('is-active', active);
       button.setAttribute('aria-pressed', String(active));
     });
-    themeToggle?.setAttribute('aria-label', state.theme === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему');
+    const nextTheme = state.theme === 'dark' ? 'light' : 'dark';
+    themeToggle?.querySelectorAll('[data-theme-icon]').forEach(icon => {
+      icon.hidden = icon.dataset.themeIcon !== state.theme;
+    });
+    themeToggle?.setAttribute(
+      'aria-label',
+      nextTheme === 'light' ? 'Включить светлую тему' : 'Включить тёмную тему'
+    );
+    themeToggle?.setAttribute('title', nextTheme === 'light' ? 'Включить светлую тему' : 'Включить тёмную тему');
   }
 
   // Step navigation
@@ -1483,6 +1681,76 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
+  }
+
+  function setHeaderSectionMenuOpen(open) {
+    headerSectionSwitcher?.classList.toggle('is-open', open);
+    headerSectionTrigger?.setAttribute('aria-expanded', String(open));
+  }
+
+  function setupHeaderSectionNavigation() {
+    headerSectionSwitcher?.addEventListener('focusin', () => {
+      setHeaderSectionMenuOpen(true);
+    });
+    headerSectionSwitcher?.addEventListener('focusout', event => {
+      if (!headerSectionSwitcher.contains(event.relatedTarget)) setHeaderSectionMenuOpen(false);
+    });
+    headerSectionTrigger?.addEventListener('click', () => {
+      setHeaderSectionMenuOpen(headerSectionTrigger.getAttribute('aria-expanded') !== 'true');
+    });
+  }
+
+  function renderHeaderSectionMenu() {
+    if (!headerSectionMenu) return;
+    headerSectionMenu.replaceChildren();
+    const pane = document.querySelector('.tab-pane.is-active');
+    const panels = [...(pane?.querySelectorAll(':scope > .panel') || [])]
+      .filter(panel => !panel.hidden);
+    panels.forEach((panel, index) => {
+      const heading = panel.querySelector(
+        ':scope > .panel-title-row h2, :scope > .panel-title-row h3, :scope > .panel-title-row h4'
+      );
+      if (!heading) return;
+      if (!panel.id) panel.id = `section-panel-${pane.id}-${index + 1}`;
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'section-switcher-item';
+      item.setAttribute('aria-label', `Открыть блок «${heading.textContent.trim()}»`);
+      const number = document.createElement('span');
+      number.className = 'section-switcher-number';
+      number.textContent = String(index + 1).padStart(2, '0');
+      const text = document.createElement('span');
+      const title = document.createElement('strong');
+      title.textContent = heading.textContent.trim();
+      const hint = document.createElement('small');
+      hint.textContent = 'Перейти к блоку';
+      text.append(title, hint);
+      item.append(number, text);
+      item.addEventListener('click', () => {
+        document.getElementById(panel.id)?.scrollIntoView({
+          behavior: state.motion === 'on' ? 'smooth' : 'auto',
+          block: 'start'
+        });
+        setHeaderSectionMenuOpen(false);
+      });
+      headerSectionMenu.append(item);
+    });
+    if (!headerSectionMenu.children.length) {
+      const empty = document.createElement('span');
+      empty.className = 'section-switcher-empty';
+      empty.textContent = 'В этой секции пока нет блоков';
+      headerSectionMenu.append(empty);
+    }
+  }
+
+  function updateHeaderSection(step) {
+    const source = document.querySelector(`.step-btn[data-step="${step}"]`);
+    const title = source?.querySelector('.step-title')?.textContent.trim() || 'Раздел';
+    const description = source?.querySelector('.step-desc')?.textContent.trim() || '';
+    if (headerSectionTitle) headerSectionTitle.textContent = title;
+    if (headerSectionDescription) headerSectionDescription.textContent = description;
+    renderHeaderSectionMenu();
+    headerSectionTrigger?.setAttribute('aria-label', `Текущая секция: ${title}. Открыть навигацию`);
   }
 
   // Go to specific step
@@ -1502,6 +1770,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tabPanes.forEach(pane => {
       pane.classList.toggle('is-active', pane.id === (targetId || fallbackId));
     });
+    updateHeaderSection(step);
     renderContentsMenu();
     observeContentPanels();
     renderCanvasBuilder();
